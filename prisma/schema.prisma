@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model ShopSettings {
+  id               String   @id @default(cuid())
+  shop             String   @unique
+  judgeMeApiToken  String?
+  claudeApiKey     String?
+  defaultTone      String   @default("professional")
+  brandVoicePrompt String?
+  defaultSignature String?
+  supportEmail     String?
+  plan             String   @default("free")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Review {
+  id             String   @id @default(cuid())
+  shop           String
+  judgeMeId      String
+  customerName   String
+  customerEmail  String?
+  customerAvatar String?
+  productId      String?
+  productName    String?
+  productImage   String?
+  rating         Int
+  title          String?
+  body           String
+  sentiment      String   @default("neutral") // positive | neutral | negative
+  status         String   @default("pending")  // pending | replied | published
+  createdAt      DateTime @default(now())
+  syncedAt       DateTime @default(now())
+  reply          Reply?
+
+  @@unique([shop, judgeMeId])
+  @@index([shop])
+}
+
+model Reply {
+  id          String   @id @default(cuid())
+  shop        String
+  reviewId    String   @unique
+  review      Review   @relation(fields: [reviewId], references: [id])
+  body        String
+  tone        String
+  length      String
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shop])
+}
+
+model UsageLog {
+  id        String   @id @default(cuid())
+  shop      String
+  action    String   // generate | regenerate | publish | improve
+  reviewId  String?
+  createdAt DateTime @default(now())
+
+  @@index([shop])
+}
