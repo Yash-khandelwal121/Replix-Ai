@@ -1,7 +1,8 @@
 import { json, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
+import { useLoaderData, useSubmit, useNavigation, useActionData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { db } from "../db.server";
+import { encrypt, decrypt } from "../lib/encryption.server";
 import { Button, TextField, Select, BlockStack, Banner } from "@shopify/polaris";
 import { useState, useEffect } from "react";
 import { useToast } from "../components/common/ToastProvider";
@@ -9,6 +10,13 @@ import { useToast } from "../components/common/ToastProvider";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const settings = await db.shopSettings.findUnique({ where: { shop: session.shop } });
+  
+  if (settings) {
+    settings.judgeMeApiToken = decrypt(settings.judgeMeApiToken || "");
+    settings.looxApiToken = decrypt(settings.looxApiToken || "");
+    settings.huggingFaceApiToken = decrypt(settings.huggingFaceApiToken || "");
+  }
+  
   return json({ settings: settings || {} });
 };
 
@@ -18,23 +26,59 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   
   const judgeMeApiToken = formData.get("judgeMeApiToken")?.toString() || "";
-  const claudeApiKey = formData.get("claudeApiKey")?.toString() || "";
+  const looxApiToken = formData.get("looxApiToken")?.toString() || "";
+  const huggingFaceApiToken = formData.get("huggingFaceApiToken")?.toString() || "";
+  const reviewProvider = formData.get("reviewProvider")?.toString() || "judgeme";
+  const defaultProvider = formData.get("defaultProvider")?.toString() || "judgeme";
   const defaultTone = formData.get("defaultTone")?.toString() || "professional";
   const brandVoicePrompt = formData.get("brandVoicePrompt")?.toString() || "";
   const defaultSignature = formData.get("defaultSignature")?.toString() || "";
   const supportEmail = formData.get("supportEmail")?.toString() || "";
 
-  if (!judgeMeApiToken || !claudeApiKey) {
-    return json({ error: "Judge.me API Token and Claude API Key are required." }, { status: 400 });
+  if (!huggingFaceApiToken) {
+    return json({ error: "Hugging Face API Token is required." }, { status: 400 });
+  }
+
+  if (reviewProvider === "judgeme" && !judgeMeApiToken) {
+    return json({ error: "Judge.me API Token is required when Judge.me is selected." }, { status: 400 });
+  }
+
+  if (reviewProvider === "loox" && !looxApiToken) {
+    return json({ error: "Loox API Token is required when Loox is selected." }, { status: 400 });
   }
 
   try {
+    const encryptedJudgeMe = encrypt(judgeMeApiToken);
+    const encryptedLoox = encrypt(looxApiToken);
+    const encryptedHuggingFace = encrypt(huggingFaceApiToken);
+
     await db.shopSettings.upsert({
       where: { shop },
-      create: { shop, judgeMeApiToken, claudeApiKey, defaultTone, brandVoicePrompt, defaultSignature, supportEmail },
-      update: { judgeMeApiToken, claudeApiKey, defaultTone, brandVoicePrompt, defaultSignature, supportEmail }
+      create: { 
+        shop, 
+        judgeMeApiToken: encryptedJudgeMe, 
+        looxApiToken: encryptedLoox,
+        huggingFaceApiToken: encryptedHuggingFace, 
+        reviewProvider,
+        defaultProvider,
+        defaultTone, 
+        brandVoicePrompt, 
+        defaultSignature, 
+        supportEmail 
+      },
+      update: { 
+        judgeMeApiToken: encryptedJudgeMe, 
+        looxApiToken: encryptedLoox,
+        huggingFaceApiToken: encryptedHuggingFace, 
+        reviewProvider,
+        defaultProvider,
+        defaultTone, 
+        brandVoicePrompt, 
+        defaultSignature, 
+        supportEmail 
+      }
     });
-    return json({ success: true });
+    return json({ success: true, error: null });
   } catch (err: any) {
     console.error("Settings save error:", err);
     return json({ error: "Database error while saving settings." }, { status: 500 });
@@ -49,7 +93,10 @@ export default function Settings() {
   
   const [formData, setFormData] = useState({
     judgeMeApiToken: settings.judgeMeApiToken || "",
-    claudeApiKey: settings.claudeApiKey || "",
+    looxApiToken: settings.looxApiToken || "",
+    huggingFaceApiToken: settings.huggingFaceApiToken || "",
+    reviewProvider: settings.reviewProvider || "judgeme",
+    defaultProvider: settings.defaultProvider || "judgeme",
     defaultTone: settings.defaultTone || "professional",
     brandVoicePrompt: settings.brandVoicePrompt || "",
     defaultSignature: settings.defaultSignature || "",
@@ -57,16 +104,37 @@ export default function Settings() {
   });
 
   const [showJudgeMeToken, setShowJudgeMeToken] = useState(false);
-  const [showClaudeKey, setShowClaudeKey] = useState(false);
+  const [showLooxToken, setShowLooxToken] = useState(false);
+  const [showHuggingFaceKey, setShowHuggingFaceKey] = useState(false);
 
   const isSaving = navigation.state === "submitting";
-  const actionData = useNavigation().formAction; // we could use useActionData, but here we can just toast from effect or action
+  const actionData = useActionData<typeof action>();
+
+  useEffect(() => {
+    if (actionData && 'success' in actionData && actionData.success) {
+      showToast("Settings saved successfully");
+    } else if (actionData && 'error' in actionData && actionData.error) {
+      showToast(actionData.error, true);
+    }
+  }, [actionData, showToast]);
 
   const handleChange = (value: string, id: string) => {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
   const handleSave = () => {
+    if (!formData.huggingFaceApiToken) {
+      showToast("Hugging Face API Token is required.", true);
+      return;
+    }
+    if (formData.reviewProvider === "judgeme" && !formData.judgeMeApiToken) {
+      showToast("Judge.me API Token is required.", true);
+      return;
+    }
+    if (formData.reviewProvider === "loox" && !formData.looxApiToken) {
+      showToast("Loox API Token is required.", true);
+      return;
+    }
     submit(formData, { method: "post" });
   };
 
@@ -76,12 +144,40 @@ export default function Settings() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         
+        <div className="replix-card" style={{ padding: "30px" }}>
+          <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "20px" }}>Providers</h2>
+          <BlockStack gap="400">
+            <Select
+              label="Review Provider"
+              options={[
+                { label: "Judge.me", value: "judgeme" },
+                { label: "Loox", value: "loox" },
+                { label: "Manual", value: "manual" },
+                { label: "CSV Import", value: "csv" },
+              ]}
+              value={formData.reviewProvider}
+              onChange={(v) => handleChange(v, "reviewProvider")}
+            />
+            <Select
+              label="Default Provider"
+              options={[
+                { label: "Judge.me", value: "judgeme" },
+                { label: "Loox", value: "loox" },
+                { label: "Manual", value: "manual" },
+                { label: "CSV Import", value: "csv" },
+              ]}
+              value={formData.defaultProvider}
+              onChange={(v) => handleChange(v, "defaultProvider")}
+            />
+          </BlockStack>
+        </div>
+
         {/* Section 1 - Integrations */}
         <div className="replix-card" style={{ padding: "30px" }}>
           <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "20px" }}>Integrations</h2>
           <BlockStack gap="400">
             <TextField
-              label="Judge.me API Token"
+              label="Judge.me API Token (Optional)"
               type={showJudgeMeToken ? "text" : "password"}
               value={formData.judgeMeApiToken}
               onChange={(v) => handleChange(v, "judgeMeApiToken")}
@@ -94,15 +190,28 @@ export default function Settings() {
               }
             />
             <TextField
-              label="Claude API Key (Anthropic)"
-              type={showClaudeKey ? "text" : "password"}
-              value={formData.claudeApiKey}
-              onChange={(v) => handleChange(v, "claudeApiKey")}
+              label="Loox API Token (Optional)"
+              type={showLooxToken ? "text" : "password"}
+              value={formData.looxApiToken}
+              onChange={(v) => handleChange(v, "looxApiToken")}
               autoComplete="off"
-              helpText="Required to generate AI replies"
+              helpText="Find this in Loox Settings"
               connectedRight={
-                <Button onClick={() => setShowClaudeKey(!showClaudeKey)}>
-                  {showClaudeKey ? "Hide" : "Show"}
+                <Button onClick={() => setShowLooxToken(!showLooxToken)}>
+                  {showLooxToken ? "Hide" : "Show"}
+                </Button>
+              }
+            />
+            <TextField
+              label="Hugging Face API Token"
+              type={showHuggingFaceKey ? "text" : "password"}
+              value={formData.huggingFaceApiToken}
+              onChange={(v) => handleChange(v, "huggingFaceApiToken")}
+              autoComplete="off"
+              helpText="Required to generate AI replies using Hugging Face models"
+              connectedRight={
+                <Button onClick={() => setShowHuggingFaceKey(!showHuggingFaceKey)}>
+                  {showHuggingFaceKey ? "Hide" : "Show"}
                 </Button>
               }
             />

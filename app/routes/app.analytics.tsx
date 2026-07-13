@@ -24,6 +24,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const neutralCount = reviews.filter((r: any) => r.sentiment === "neutral").length;
   const negativeCount = reviews.filter((r: any) => r.sentiment === "negative").length;
 
+  const manualCount = reviews.filter((r: any) => r.provider === "manual").length;
+  const csvCount = reviews.filter((r: any) => r.provider === "csv").length;
+  const judgemeCount = reviews.filter((r: any) => !r.provider || r.provider === "judgeme").length;
+  const looxCount = reviews.filter((r: any) => r.provider === "loox").length;
+
   const avgRating = totalReviews > 0 ? (reviews.reduce((acc: any, r: any) => acc + r.rating, 0) / totalReviews).toFixed(1) : "0.0";
 
   // Mock weekly/monthly data since we don't have historical grouped data readily available without raw SQL grouping
@@ -44,10 +49,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     { name: "Negative", value: negativeCount, fill: "var(--color-danger)" },
   ];
 
+  const providerData = [
+    { name: "Judge.me", value: judgemeCount, fill: "#01579b" },
+    { name: "Loox", value: looxCount, fill: "#8a6116" },
+    { name: "Manual", value: manualCount, fill: "#202223" },
+    { name: "CSV", value: csvCount, fill: "#007f5f" },
+  ];
+
   return json({
     totalReviews, totalReplies, publishedReplies,
     positiveCount, neutralCount, negativeCount,
-    avgRating, weeklyData, sentimentData
+    avgRating, weeklyData, sentimentData, providerData
   });
 };
 
@@ -125,6 +137,21 @@ export default function Analytics() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      <div className="replix-card" style={{ padding: "24px", marginBottom: "32px" }}>
+        <h2 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "24px" }}>Provider Breakdown</h2>
+        <div style={{ height: "120px" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.providerData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--color-border)" />
+              <XAxis type="number" hide />
+              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 13, fontWeight: 500, fill: "var(--color-text)" }} width={80} />
+              <Tooltip cursor={{ fill: "transparent" }} contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "var(--shadow-card)" }} />
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

@@ -350,3 +350,16 @@ This template uses [Remix](https://remix.run). The following Shopify tools are a
 - [App extensions](https://shopify.dev/docs/apps/app-extensions/list)
 - [Shopify Functions](https://shopify.dev/docs/api/functions)
 - [Getting started with internationalizing your app](https://shopify.dev/docs/apps/best-practices/internationalization/getting-started)
+
+## Hugging Face Integration
+
+This application relies on the **Hugging Face Inference API** to automatically generate smart, contextual replies to customer reviews.
+
+### Setup Instructions
+1. Create a free account at [Hugging Face](https://huggingface.co/).
+2. Navigate to your [Settings > Access Tokens](https://huggingface.co/settings/tokens).
+3. Create a new token (Read permissions are sufficient for inference).
+4. In your deployment environment (e.g. Vercel) or your local `.env` file, ensure you have set the global encryption key if you're testing encryption locally (though the app handles user tokens per-shop in the DB).
+5. Open the **Settings** page within the Shopify App UI.
+6. Enter your token into the **Hugging Face API Token** field.
+7. Save the settings. The app will automatically securely encrypt the token in the database and use it to power the review reply generation via the `Qwen/Qwen3-8B-Instruct` model!

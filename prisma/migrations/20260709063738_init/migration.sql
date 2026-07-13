@@ -1,11 +1,11 @@
 -- CreateTable
 CREATE TABLE "Session" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "shop" TEXT NOT NULL,
     "state" TEXT NOT NULL,
     "isOnline" BOOLEAN NOT NULL DEFAULT false,
     "scope" TEXT,
-    "expires" DATETIME,
+    "expires" TIMESTAMP(3),
     "accessToken" TEXT NOT NULL,
     "userId" BIGINT,
     "firstName" TEXT,
@@ -16,12 +16,14 @@ CREATE TABLE "Session" (
     "collaborator" BOOLEAN DEFAULT false,
     "emailVerified" BOOLEAN DEFAULT false,
     "refreshToken" TEXT,
-    "refreshTokenExpires" DATETIME
+    "refreshTokenExpires" TIMESTAMP(3),
+
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "ShopSettings" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "shop" TEXT NOT NULL,
     "judgeMeApiToken" TEXT,
     "claudeApiKey" TEXT,
@@ -30,13 +32,15 @@ CREATE TABLE "ShopSettings" (
     "defaultSignature" TEXT,
     "supportEmail" TEXT,
     "plan" TEXT NOT NULL DEFAULT 'free',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ShopSettings_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Review" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "shop" TEXT NOT NULL,
     "judgeMeId" TEXT NOT NULL,
     "customerName" TEXT NOT NULL,
@@ -50,31 +54,36 @@ CREATE TABLE "Review" (
     "body" TEXT NOT NULL,
     "sentiment" TEXT NOT NULL DEFAULT 'neutral',
     "status" TEXT NOT NULL DEFAULT 'pending',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "syncedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "syncedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Review_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Reply" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "shop" TEXT NOT NULL,
     "reviewId" TEXT NOT NULL,
     "body" TEXT NOT NULL,
     "tone" TEXT NOT NULL,
     "length" TEXT NOT NULL,
-    "publishedAt" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Reply_reviewId_fkey" FOREIGN KEY ("reviewId") REFERENCES "Review" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "publishedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Reply_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "UsageLog" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "shop" TEXT NOT NULL,
     "action" TEXT NOT NULL,
     "reviewId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UsageLog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -94,3 +103,6 @@ CREATE INDEX "Reply_shop_idx" ON "Reply"("shop");
 
 -- CreateIndex
 CREATE INDEX "UsageLog_shop_idx" ON "UsageLog"("shop");
+
+-- AddForeignKey
+ALTER TABLE "Reply" ADD CONSTRAINT "Reply_reviewId_fkey" FOREIGN KEY ("reviewId") REFERENCES "Review"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

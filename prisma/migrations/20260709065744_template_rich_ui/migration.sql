@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Template" ADD COLUMN     "category" TEXT NOT NULL DEFAULT 'General',
+ADD COLUMN     "icon" TEXT NOT NULL DEFAULT 'NoteIcon',
+ADD COLUMN     "isFavorite" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "tags" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "usageCount" INTEGER NOT NULL DEFAULT 0;

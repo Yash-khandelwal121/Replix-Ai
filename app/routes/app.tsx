@@ -37,9 +37,14 @@ export default function App() {
   );
 }
 
-// Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
-  return boundary.error(useRouteError());
+  const error = useRouteError() as any;
+  return (
+    <div style={{ padding: "20px" }}>
+      <h1>Error in App</h1>
+      <pre>{error?.message || error?.statusText || "Unknown error"}</pre>
+    </div>
+  );
 }
 
 export const headers: HeadersFunction = (headersArgs) => {

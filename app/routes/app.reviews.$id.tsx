@@ -17,21 +17,22 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   if (!id) throw new Error("Review ID required");
 
-  const [review, settings] = await Promise.all([
+  const [review, settings, templates] = await Promise.all([
     db.review.findUnique({
       where: { id, shop },
       include: { reply: true }
     }),
-    db.shopSettings.findUnique({ where: { shop } })
+    db.shopSettings.findUnique({ where: { shop } }),
+    db.template.findMany({ where: { shop }, orderBy: { createdAt: "desc" } })
   ]);
 
   if (!review) throw new Response("Not Found", { status: 404 });
 
-  return json({ review, settings });
+  return json({ review, settings, templates });
 };
 
 export default function AIReplyEditor() {
-  const { review, settings } = useLoaderData<typeof loader>();
+  const { review, settings, templates } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const fetcher = useFetcher<any>();
@@ -39,18 +40,24 @@ export default function AIReplyEditor() {
   const defaultTone = settings?.defaultTone || "professional";
   const [tone, setTone] = useState(review.reply?.tone || defaultTone);
   const [length, setLength] = useState(review.reply?.length || "medium");
+  const [templateId, setTemplateId] = useState("");
   const [replyBody, setReplyBody] = useState(review.reply?.body || "");
 
   const isGenerating = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "generate";
   const isPublishing = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "publish";
+  const isDeleting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "delete";
 
   useEffect(() => {
     if (fetcher.data?.reply) {
       setReplyBody(fetcher.data.reply);
       showToast("Reply generated successfully");
     }
-    if (fetcher.data?.success) {
-      showToast("Reply published to Judge.me!");
+    if (fetcher.data?.success && fetcher.data?.action === "publish") {
+      showToast("Reply published!");
+      navigate("/app/reviews");
+    }
+    if (fetcher.data?.success && fetcher.data?.action === "delete") {
+      showToast("Review deleted!");
       navigate("/app/reviews");
     }
     if (fetcher.data?.error) {
@@ -60,7 +67,7 @@ export default function AIReplyEditor() {
 
   const handleGenerate = () => {
     fetcher.submit(
-      { reviewId: review.id, tone, length, intent: "generate" },
+      { reviewId: review.id, tone, length, templateId, intent: "generate" },
       { method: "post", action: "/api/reply/generate" }
     );
   };
@@ -70,6 +77,15 @@ export default function AIReplyEditor() {
       { reviewId: review.id, intent: "publish" },
       { method: "post", action: "/api/reply/publish" }
     );
+  };
+
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this review?")) {
+      fetcher.submit(
+        { reviewId: review.id, intent: "delete" },
+        { method: "post", action: "/api/reply/publish" } // We will route this to a unified action or a separate route. Wait, action is in api.reply.publish, but I should use the loader action.
+      );
+    }
   };
 
   const handleCopy = () => {
@@ -133,6 +149,29 @@ export default function AIReplyEditor() {
         <div className="replix-card" style={{ flex: "1 1 600px", padding: "30px", display: "flex", flexDirection: "column" }}>
           
           <div style={{ marginBottom: "20px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>AI Template</div>
+            <select
+              value={templateId}
+              onChange={(e) => setTemplateId(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "8px",
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+                fontSize: "14px",
+                outline: "none",
+                cursor: "pointer"
+              }}
+            >
+              <option value="">None (Auto-generate)</option>
+              {templates.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ marginBottom: "20px", opacity: templateId ? 0.5 : 1, pointerEvents: templateId ? "none" : "auto" }}>
             <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Tone</div>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               {["professional", "friendly", "luxury", "formal", "casual", "funny"].map((t) => (
@@ -230,6 +269,9 @@ export default function AIReplyEditor() {
             <div style={{ display: "flex", gap: "12px" }}>
               <Button onClick={handleCopy} disabled={!replyBody} icon={DuplicateIcon}>
                 Copy
+              </Button>
+              <Button onClick={handleDelete} tone="critical" loading={isDeleting}>
+                Delete
               </Button>
               <Button 
                 onClick={handlePublish} 

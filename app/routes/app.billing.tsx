@@ -1,17 +1,103 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import { authenticate } from "../shopify.server";
+import { json, redirect, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
+import { useLoaderData, useSubmit, useNavigation, useActionData, useNavigate } from "@remix-run/react";
+import { useEffect } from "react";
+import { authenticate, MONTHLY_PLAN } from "../shopify.server";
 import { db } from "../db.server";
 import { Button, Icon } from "@shopify/polaris";
 import { CheckIcon } from "@shopify/polaris-icons";
+import { useToast } from "../components/common/ToastProvider";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const settings = await db.shopSettings.findUnique({ where: { shop: session.shop } });
-  return json({ plan: settings?.plan || "free" });
+  const { session, billing } = await authenticate.admin(request);
+  const shop = session.shop;
+
+  const billingCheck = await billing.check({
+    plans: [MONTHLY_PLAN],
+    isTest: true,
+  });
+
+  let settings = await db.shopSettings.findUnique({ where: { shop } });
+  let currentPlan = settings?.plan || "free";
+
+  if (billingCheck.hasActivePayment && currentPlan !== "pro") {
+    await db.shopSettings.upsert({
+      where: { shop },
+      create: { shop, plan: "pro" },
+      update: { plan: "pro" }
+    });
+    return redirect("/app?upgrade=success");
+  } else if (!billingCheck.hasActivePayment && currentPlan === "pro") {
+    await db.shopSettings.upsert({
+      where: { shop },
+      create: { shop, plan: "free" },
+      update: { plan: "free" }
+    });
+    currentPlan = "free";
+  }
+
+  return json({ plan: currentPlan });
 };
 
-function PlanCard({ title, price, features, isCurrent, onUpgrade }: { title: string, price: string, features: string[], isCurrent: boolean, onUpgrade?: () => void }) {
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { billing } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "upgrade") {
+    const { session } = await authenticate.admin(request);
+    
+    // Check if they already have the plan on Shopify's end
+    await billing.require({
+      plans: [MONTHLY_PLAN],
+      isTest: true,
+      onFailure: async () => billing.request({
+        plan: MONTHLY_PLAN,
+        isTest: true,
+      }),
+    });
+
+    // If we get here, they already have the active subscription on Shopify!
+    await db.shopSettings.upsert({
+      where: { shop: session.shop },
+      create: { shop: session.shop, plan: "pro" },
+      update: { plan: "pro" }
+    });
+
+    return json({ success: true, alreadyActive: true });
+  }
+
+  if (intent === "downgrade") {
+    const { session } = await authenticate.admin(request);
+    
+    // Check for active subscriptions to cancel
+    const billingCheck = await billing.check({
+      plans: [MONTHLY_PLAN],
+      isTest: true,
+    });
+
+    const subscription = billingCheck.appSubscriptions[0];
+    if (subscription) {
+      await billing.cancel({
+        subscriptionId: subscription.id,
+        isTest: true,
+        prorate: true,
+      });
+    }
+
+    // Downgrade in our database
+    await db.shopSettings.upsert({
+      where: { shop: session.shop },
+      create: { shop: session.shop, plan: "free" },
+      update: { plan: "free" }
+    });
+
+    return json({ success: true, downgraded: true });
+  }
+
+  return json({ success: true });
+};
+
+function PlanCard({ title, price, features, isCurrent, isLoading, onAction, actionText }: { title: string, price: string, features: string[], isCurrent: boolean, isLoading?: boolean, onAction?: () => void, actionText: string }) {
   return (
     <div className="replix-card" style={{ 
       padding: "40px 30px", 
@@ -47,9 +133,10 @@ function PlanCard({ title, price, features, isCurrent, onUpgrade }: { title: str
         size="large" 
         fullWidth 
         disabled={isCurrent}
-        onClick={onUpgrade}
+        loading={isLoading}
+        onClick={onAction}
       >
-        {isCurrent ? "Current Plan" : "Upgrade Plan"}
+        {isCurrent ? "Current Plan" : actionText}
       </Button>
     </div>
   );
@@ -57,6 +144,27 @@ function PlanCard({ title, price, features, isCurrent, onUpgrade }: { title: str
 
 export default function Billing() {
   const { plan } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const submit = useSubmit();
+  const navigation = useNavigation();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
+  const isUpgrading = navigation.state === "submitting" && navigation.formData?.get("intent") === "upgrade";
+  const isDowngrading = navigation.state === "submitting" && navigation.formData?.get("intent") === "downgrade";
+
+  const handleUpgrade = () => submit({ intent: "upgrade" }, { method: "post" });
+  const handleDowngrade = () => submit({ intent: "downgrade" }, { method: "post" });
+
+  useEffect(() => {
+    if (actionData?.alreadyActive) {
+      showToast("Plan synced successfully! You are on Pro.");
+      navigate("/app?upgrade=success");
+    }
+    if (actionData?.downgraded) {
+      showToast("Downgraded to Free Plan successfully.");
+    }
+  }, [actionData, showToast, navigate]);
 
   return (
     <div style={{ padding: "60px 20px", maxWidth: "900px", margin: "0 auto" }}>
@@ -70,6 +178,9 @@ export default function Billing() {
           title="Free Plan"
           price="$0"
           isCurrent={plan === "free"}
+          isLoading={isDowngrading}
+          actionText="Downgrade to Free"
+          onAction={handleDowngrade}
           features={[
             "50 AI replies / month",
             "Basic analytics",
@@ -82,6 +193,9 @@ export default function Billing() {
           title="Pro Plan"
           price="$49"
           isCurrent={plan === "pro"}
+          isLoading={isUpgrading}
+          actionText="Upgrade Plan"
+          onAction={handleUpgrade}
           features={[
             "Unlimited AI replies",
             "Advanced analytics & insights",
@@ -90,10 +204,6 @@ export default function Billing() {
             "Brand voice customization",
             "Multiple team members"
           ]}
-          onUpgrade={() => {
-            // Shopify App Bridge billing upgrade flow goes here
-            alert("Billing API integration required.");
-          }}
         />
       </div>
     </div>

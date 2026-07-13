@@ -1,7 +1,7 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { db } from "../db.server";
-import { generateReply } from "../lib/claude.server";
+import { generateReply } from "../lib/huggingface.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -11,23 +11,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const reviewId = formData.get("reviewId")?.toString();
   const tone = formData.get("tone")?.toString() || "professional";
   const length = formData.get("length")?.toString() || "medium";
+  const templateId = formData.get("templateId")?.toString();
   const intent = formData.get("intent")?.toString();
 
   if (!reviewId || intent !== "generate") {
     return json({ error: "Missing parameters or invalid intent" }, { status: 400 });
   }
 
-  const [review, settings] = await Promise.all([
+  const [review, settings, template] = await Promise.all([
     db.review.findUnique({ where: { id: reviewId, shop } }),
-    db.shopSettings.findUnique({ where: { shop } })
+    db.shopSettings.findUnique({ where: { shop } }),
+    templateId ? db.template.findUnique({ where: { id: templateId, shop } }) : null
   ]);
 
   if (!review) {
     return json({ error: "Review not found" }, { status: 404 });
   }
 
-  if (!settings?.claudeApiKey) {
-    return json({ error: "Claude API Key is not configured. Please add it in Settings." }, { status: 400 });
+  if (!settings?.huggingFaceApiToken) {
+    return json({ error: "Hugging Face API Token is not configured. Please add it in Settings." }, { status: 400 });
   }
 
   try {
@@ -40,7 +42,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       length,
       brandVoice: settings.brandVoicePrompt || undefined,
       signature: settings.defaultSignature || undefined,
-      apiKey: settings.claudeApiKey
+      templatePrompt: template?.prompt,
+      apiKey: settings.huggingFaceApiToken
     });
 
     // Upsert Reply

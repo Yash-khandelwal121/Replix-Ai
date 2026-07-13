@@ -1,9 +1,11 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useNavigate } from "@remix-run/react";
+import { useLoaderData, useNavigate, useSearchParams } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { db } from "../db.server";
 import { Button, Icon } from "@shopify/polaris";
 import { ClockIcon, CheckCircleIcon, StarFilledIcon, MagicIcon, DuplicateIcon, HeartIcon, ArrowUpIcon, CalendarIcon } from "@shopify/polaris-icons";
+import { useToast } from "../components/common/ToastProvider";
+import { useEffect } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -66,6 +68,15 @@ function StatCard({ title, value, icon, tint }: { title: string, value: string |
 export default function Dashboard() {
   const data = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (searchParams.get("upgrade") === "success") {
+      showToast("Plan bought successfully");
+      setSearchParams(new URLSearchParams(), { replace: true });
+    }
+  }, [searchParams, showToast, setSearchParams]);
 
   return (
     <div style={{ padding: "40px", maxWidth: "1200px", margin: "0 auto" }}>
