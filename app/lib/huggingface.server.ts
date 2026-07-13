@@ -71,16 +71,16 @@ export async function improveReply(
 
 async function callHuggingFaceWithRetry(systemPrompt: string, userPrompt: string, apiKey: string, retries = 3): Promise<string> {
   const models = [
-    "mistralai/Mistral-7B-Instruct-v0.2",
-    "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    "HuggingFaceH4/zephyr-7b-beta"
+    "Qwen/Qwen2.5-72B-Instruct",
+    "mistralai/Mistral-Nemo-Instruct-2407",
+    "google/gemma-2-9b-it"
   ];
 
   let lastError: any = null;
 
   for (let attempt = 0; attempt < retries; attempt++) {
     for (const model of models) {
-      const url = `https://api-inference.huggingface.co/models/${model}/v1/chat/completions`;
+      const url = "https://router.huggingface.co/v1/chat/completions";
       try {
         console.log(`[HF_API_REQUEST] Attempting model: ${model} URL: ${url}`);
         

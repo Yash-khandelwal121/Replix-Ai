@@ -1,7 +1,8 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { db } from "../db.server";
-import { generateReply } from "../lib/huggingface.server";
+import { generateReply, improveReply } from "../lib/huggingface.server";
+import { decrypt } from "../lib/encryption.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -14,7 +15,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const templateId = formData.get("templateId")?.toString();
   const intent = formData.get("intent")?.toString();
 
-  if (!reviewId || intent !== "generate") {
+  if (!reviewId || (intent !== "generate" && intent !== "improve")) {
     return json({ error: "Missing parameters or invalid intent" }, { status: 400 });
   }
 
@@ -33,18 +34,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   try {
-    const generatedText = await generateReply({
-      review: review.body,
-      customerName: review.customerName,
-      productName: review.productName || "our product",
-      rating: review.rating,
-      tone,
-      length,
-      brandVoice: settings.brandVoicePrompt || undefined,
-      signature: settings.defaultSignature || undefined,
-      templatePrompt: template?.prompt,
-      apiKey: settings.huggingFaceApiToken
-    });
+    const decryptedToken = decrypt(settings.huggingFaceApiToken || "");
+
+    let generatedText = "";
+    if (intent === "improve") {
+      const existingReply = await db.reply.findUnique({ where: { reviewId: review.id } });
+      if (!existingReply || !existingReply.body) {
+        return json({ error: "No existing reply to improve" }, { status: 400 });
+      }
+      generatedText = await improveReply(existingReply.body, decryptedToken);
+    } else {
+      generatedText = await generateReply({
+        review: review.body,
+        customerName: review.customerName,
+        productName: review.productName || "our product",
+        rating: review.rating,
+        tone,
+        length,
+        brandVoice: settings.brandVoicePrompt || undefined,
+        signature: settings.defaultSignature || undefined,
+        templatePrompt: template?.prompt,
+        apiKey: decryptedToken
+      });
+    }
 
     // Upsert Reply
     await db.reply.upsert({

@@ -2,12 +2,12 @@ import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData, useNavigate, useFetcher } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { db } from "../db.server";
-import { Button, Icon, Text, BlockStack, InlineStack, Divider, Badge } from "@shopify/polaris";
+import { Button, Icon, Text, BlockStack, InlineStack, Divider, Badge, Modal } from "@shopify/polaris";
 import { ArrowLeftIcon, MagicIcon, EditIcon, CheckCircleIcon, DuplicateIcon } from "@shopify/polaris-icons";
 import { StarRating } from "../components/reviews/StarRating";
 import { SentimentBadge } from "../components/reviews/SentimentBadge";
 import { formatTimeAgo } from "../lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "../components/common/ToastProvider";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -43,9 +43,12 @@ export default function AIReplyEditor() {
   const [templateId, setTemplateId] = useState("");
   const [replyBody, setReplyBody] = useState(review.reply?.body || "");
 
-  const isGenerating = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "generate";
+  const isGenerating = fetcher.state !== "idle" && (fetcher.formData?.get("intent") === "generate" || fetcher.formData?.get("intent") === "improve");
   const isPublishing = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "publish";
   const isDeleting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "delete";
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const toggleDeleteModal = useCallback(() => setIsDeleteModalOpen((open) => !open), []);
 
   useEffect(() => {
     if (fetcher.data?.reply) {
@@ -72,6 +75,13 @@ export default function AIReplyEditor() {
     );
   };
 
+  const handleImprove = () => {
+    fetcher.submit(
+      { reviewId: review.id, intent: "improve" },
+      { method: "post", action: "/api/reply/generate" }
+    );
+  };
+
   const handlePublish = () => {
     fetcher.submit(
       { reviewId: review.id, intent: "publish" },
@@ -80,17 +90,39 @@ export default function AIReplyEditor() {
   };
 
   const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this review?")) {
-      fetcher.submit(
-        { reviewId: review.id, intent: "delete" },
-        { method: "post", action: "/api/reply/publish" } // We will route this to a unified action or a separate route. Wait, action is in api.reply.publish, but I should use the loader action.
-      );
-    }
+    toggleDeleteModal();
+  };
+
+  const confirmDelete = () => {
+    fetcher.submit(
+      { reviewId: review.id, intent: "delete" },
+      { method: "post", action: "/api/reply/publish" }
+    );
+    toggleDeleteModal();
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(replyBody);
-    showToast("Copied to clipboard");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(replyBody)
+        .then(() => showToast("Copied to clipboard"))
+        .catch(() => fallbackCopy(replyBody));
+    } else {
+      fallbackCopy(replyBody);
+    }
+  };
+
+  const fallbackCopy = (text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showToast("Copied to clipboard");
+    } catch (err) {
+      showToast("Failed to copy", true);
+    }
+    document.body.removeChild(textArea);
   };
 
   return (
@@ -261,7 +293,7 @@ export default function AIReplyEditor() {
               <Button onClick={handleGenerate} variant="primary" loading={isGenerating}>
                 {replyBody ? "Regenerate" : "Generate Reply"}
               </Button>
-              <Button onClick={() => {}} disabled={!replyBody || isGenerating} icon={EditIcon}>
+              <Button onClick={handleImprove} disabled={!replyBody || isGenerating} icon={EditIcon}>
                 Improve Writing
               </Button>
             </div>
@@ -287,6 +319,28 @@ export default function AIReplyEditor() {
         </div>
 
       </div>
+
+      <Modal
+        open={isDeleteModalOpen}
+        onClose={toggleDeleteModal}
+        title="Delete Review"
+        primaryAction={{
+          content: 'Delete',
+          destructive: true,
+          onAction: confirmDelete,
+          loading: isDeleting
+        }}
+        secondaryActions={[
+          {
+            content: 'Cancel',
+            onAction: toggleDeleteModal,
+          },
+        ]}
+      >
+        <Modal.Section>
+          <Text as="p">Are you sure you want to delete this review? This action cannot be undone.</Text>
+        </Modal.Section>
+      </Modal>
     </div>
   );
 }

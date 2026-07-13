@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData } from "@remix-run/react";
+import { useActionData, useLoaderData } from "@remix-run/react";
 import {
   AppProvider as PolarisAppProvider,
   Button,
@@ -38,12 +38,38 @@ export default function Auth() {
   const actionData = useActionData<typeof action>();
   const [shop, setShop] = useState("");
   const { errors } = actionData || loaderData;
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    // If we are running inside the Shopify Admin iframe, we can automatically get the shop domain
+    // from App Bridge and auto-submit the login form to resume the authentication flow.
+    const urlParams = new URLSearchParams(window.location.search);
+    let shopDomain = urlParams.get("shop");
+    
+    // Fallback to App Bridge config if available
+    if (!shopDomain && window.shopify && window.shopify.config && window.shopify.config.shop) {
+      shopDomain = window.shopify.config.shop;
+    }
+
+    if (shopDomain && !errors.shop) {
+      setShop(shopDomain);
+      
+      // Auto-submit after setting the shop using native form submission
+      // to ensure target="_top" is respected and we break out of the iframe
+      const timer = setTimeout(() => {
+        if (formRef.current) {
+          formRef.current.submit();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [errors.shop]);
 
   return (
     <PolarisAppProvider i18n={loaderData.polarisTranslations}>
       <Page>
         <Card>
-          <Form method="post">
+          <form method="post" action="/auth/login" target="_top" ref={formRef}>
             <FormLayout>
               <Text variant="headingMd" as="h2">
                 Log in
@@ -60,7 +86,7 @@ export default function Auth() {
               />
               <Button submit>Log in</Button>
             </FormLayout>
-          </Form>
+          </form>
         </Card>
       </Page>
     </PolarisAppProvider>
