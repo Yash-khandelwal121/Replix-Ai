@@ -8,6 +8,7 @@ import customStyles from "../styles/custom.css?url";
 import AppSidebar from "../components/layout/AppSidebar";
 import { ToastProvider } from "../components/common/ToastProvider";
 import { authenticate } from "../shopify.server";
+import { db } from "../db.server";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
@@ -15,9 +16,15 @@ export const links = () => [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
+  const shopSettings = await db.shopSettings.findUnique({ where: { shop: session.shop } });
+  const plan = shopSettings?.plan || "free";
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  return { 
+    apiKey: process.env.SHOPIFY_API_KEY || "", 
+    shop: session.shop,
+    plan 
+  };
 };
 
 export default function App() {

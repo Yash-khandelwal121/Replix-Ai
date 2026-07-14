@@ -3,8 +3,6 @@ import { useLoaderData, useSubmit, useNavigation, useActionData, useNavigate } f
 import { useEffect } from "react";
 import { authenticate, MONTHLY_PLAN } from "../shopify.server";
 import { db } from "../db.server";
-import { Button, Icon } from "@shopify/polaris";
-import { CheckIcon } from "@shopify/polaris-icons";
 import { useToast } from "../components/common/ToastProvider";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -97,50 +95,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ success: true });
 };
 
-function PlanCard({ title, price, features, isCurrent, isLoading, onAction, actionText }: { title: string, price: string, features: string[], isCurrent: boolean, isLoading?: boolean, onAction?: () => void, actionText: string }) {
-  return (
-    <div className="replix-card" style={{ 
-      padding: "40px 30px", 
-      flex: 1, 
-      display: "flex", 
-      flexDirection: "column",
-      border: isCurrent ? "2px solid var(--color-primary)" : "2px solid transparent",
-      position: "relative"
-    }}>
-      {isCurrent && (
-        <div style={{
-          position: "absolute", top: "-12px", left: "50%", transform: "translateX(-50%)",
-          backgroundColor: "var(--color-primary)", color: "white", padding: "4px 12px",
-          borderRadius: "999px", fontSize: "12px", fontWeight: 600
-        }}>
-          Current Plan
-        </div>
-      )}
-      <h2 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "8px" }}>{title}</h2>
-      <div style={{ fontSize: "36px", fontWeight: 800, marginBottom: "8px" }}>
-        {price} <span style={{ fontSize: "16px", fontWeight: 500, color: "var(--color-text-secondary)" }}>/month</span>
-      </div>
-      <div style={{ flex: 1, marginTop: "24px", marginBottom: "32px", display: "flex", flexDirection: "column", gap: "16px" }}>
-        {features.map((feature, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-            <div style={{ color: "var(--color-success)", marginTop: "2px" }}><Icon source={CheckIcon} /></div>
-            <span style={{ fontSize: "15px", color: "var(--color-text)" }}>{feature}</span>
-          </div>
-        ))}
-      </div>
-      <Button 
-        variant={isCurrent ? "tertiary" : "primary"} 
-        size="large" 
-        fullWidth 
-        disabled={isCurrent}
-        loading={isLoading}
-        onClick={onAction}
-      >
-        {isCurrent ? "Current Plan" : actionText}
-      </Button>
-    </div>
-  );
-}
+// Check icon component for features
+const CheckIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px" }}>
+    <path fillRule="evenodd" clipRule="evenodd" d="M16.7071 5.29289C17.0976 5.68342 17.0976 6.31658 16.7071 6.70711L8.70711 14.7071C8.31658 15.0976 7.68342 15.0976 7.29289 14.7071L3.29289 10.7071C2.90237 10.3166 2.90237 9.68342 3.29289 9.29289C3.68342 8.90237 4.31658 8.90237 4.70711 9.29289L8 12.5858L15.2929 5.29289C15.6834 4.90237 16.3166 4.90237 16.7071 5.29289Z" fill="#108043"/>
+  </svg>
+);
+
+const CrossIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px" }}>
+    <path fillRule="evenodd" clipRule="evenodd" d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L10 8.58579L13.2929 5.29289C13.6834 4.90237 14.3166 4.90237 14.7071 5.29289C15.0976 5.68342 15.0976 6.31658 14.7071 6.70711L11.4142 10L14.7071 13.2929C15.0976 13.6834 15.0976 14.3166 14.7071 14.7071C14.3166 15.0976 13.6834 15.0976 13.2929 14.7071L10 11.4142L6.70711 14.7071C6.31658 15.0976 5.68342 15.0976 5.29289 14.7071C4.90237 14.3166 4.90237 13.6834 5.29289 13.2929L8.58579 10L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z" fill="#8C9196"/>
+  </svg>
+);
+
 
 export default function Billing() {
   const { plan } = useLoaderData<typeof loader>();
@@ -153,6 +120,7 @@ export default function Billing() {
   const isUpgrading = navigation.state === "submitting" && navigation.formData?.get("intent") === "upgrade";
   const isDowngrading = navigation.state === "submitting" && navigation.formData?.get("intent") === "downgrade";
 
+  // Both upgrade buttons use the exact same logic (to respect existing backend limitations)
   const handleUpgrade = () => submit({ intent: "upgrade" }, { method: "post" });
   const handleDowngrade = () => submit({ intent: "downgrade" }, { method: "post" });
 
@@ -167,45 +135,509 @@ export default function Billing() {
   }, [actionData, showToast, navigate]);
 
   return (
-    <div style={{ padding: "60px 20px", maxWidth: "900px", margin: "0 auto" }}>
-      <div style={{ textAlign: "center", marginBottom: "48px" }}>
-        <h1 style={{ fontSize: "36px", fontWeight: 800, marginBottom: "16px" }}>Simple, transparent pricing</h1>
-        <p style={{ fontSize: "18px", color: "var(--color-text-secondary)" }}>Choose the plan that fits your review volume.</p>
-      </div>
+    <>
+      <style>{`
+        .replix-billing-page {
+          font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+          background-color: #FAFAFA;
+          min-height: 100vh;
+          padding: 60px 40px;
+          color: #202223;
+        }
 
-      <div style={{ display: "flex", gap: "32px", flexWrap: "wrap", justifyContent: "center" }}>
-        <PlanCard
-          title="Free Plan"
-          price="$0"
-          isCurrent={plan === "free"}
-          isLoading={isDowngrading}
-          actionText="Downgrade to Free"
-          onAction={handleDowngrade}
-          features={[
-            "50 AI replies / month",
-            "Basic analytics",
-            "1 store connection",
-            "No Judge.me auto-publishing",
-            "Standard support"
-          ]}
-        />
-        <PlanCard
-          title="Pro Plan"
-          price="$49"
-          isCurrent={plan === "pro"}
-          isLoading={isUpgrading}
-          actionText="Upgrade Plan"
-          onAction={handleUpgrade}
-          features={[
-            "Unlimited AI replies",
-            "Advanced analytics & insights",
-            "Direct Judge.me publishing",
-            "Priority email support",
-            "Brand voice customization",
-            "Multiple team members"
-          ]}
-        />
+        .replix-header {
+          text-align: center;
+          margin-bottom: 60px;
+          max-width: 600px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .replix-header h1 {
+          font-size: 40px;
+          font-weight: 800;
+          color: #1A1A1A;
+          margin: 0 0 16px 0;
+          letter-spacing: -0.03em;
+        }
+
+        .replix-header p {
+          font-size: 18px;
+          color: #5C5F62;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        /* Pricing Grid */
+        .replix-pricing-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+          max-width: 1100px;
+          margin: 0 auto 80px auto;
+        }
+
+        /* Plan Cards */
+        .replix-plan-card {
+          background-color: #FFFFFF;
+          border-radius: 20px;
+          padding: 32px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+          border: 1px solid #F1F2F4;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .replix-plan-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .replix-plan-recommended {
+          border-color: #6366F1;
+          box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15);
+          transform: scale(1.02);
+          z-index: 2;
+        }
+        .replix-plan-recommended:hover {
+          transform: scale(1.02) translateY(-8px);
+          box-shadow: 0 20px 40px rgba(99, 102, 241, 0.25);
+        }
+
+        .replix-badge-popular {
+          position: absolute;
+          top: -14px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+          color: white;
+          font-size: 12px;
+          font-weight: 700;
+          padding: 6px 16px;
+          border-radius: 99px;
+          letter-spacing: 0.05em;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .replix-plan-name {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1A1A1A;
+          margin: 0 0 8px 0;
+        }
+
+        .replix-plan-price {
+          font-size: 42px;
+          font-weight: 800;
+          color: #1A1A1A;
+          margin: 0 0 32px 0;
+          display: flex;
+          align-items: baseline;
+        }
+        .replix-plan-price span {
+          font-size: 16px;
+          font-weight: 500;
+          color: #5C5F62;
+          margin-left: 4px;
+        }
+
+        .replix-features-list {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 32px 0;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .replix-feature-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          font-size: 15px;
+          color: #202223;
+          line-height: 1.4;
+        }
+
+        /* Buttons */
+        .replix-btn-pricing {
+          width: 100%;
+          padding: 14px;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 600;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: none;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .replix-btn-pricing:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .replix-btn-primary {
+          background-color: #008060;
+          color: white;
+          box-shadow: 0 4px 12px rgba(0, 128, 96, 0.2);
+        }
+        .replix-btn-primary:hover:not(:disabled) {
+          background-color: #006E52;
+          box-shadow: 0 6px 16px rgba(0, 128, 96, 0.25);
+        }
+
+        .replix-btn-brand {
+          background-color: #6366F1;
+          color: white;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        .replix-btn-brand:hover:not(:disabled) {
+          background-color: #4F46E5;
+          box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .replix-btn-secondary {
+          background-color: #F1F2F4;
+          color: #202223;
+          border: 1px solid #E4E5E7;
+        }
+        .replix-btn-secondary:hover:not(:disabled) {
+          background-color: #E4E5E7;
+        }
+
+        .replix-current-plan-notice {
+          margin-top: 16px;
+          text-align: center;
+          font-size: 13px;
+          color: #5C5F62;
+          line-height: 1.4;
+        }
+
+        /* Comparison Table */
+        .replix-comparison-section {
+          max-width: 1000px;
+          margin: 0 auto 80px auto;
+        }
+        
+        .replix-section-title {
+          font-size: 28px;
+          font-weight: 700;
+          text-align: center;
+          margin-bottom: 40px;
+          color: #1A1A1A;
+        }
+
+        .replix-table {
+          width: 100%;
+          border-collapse: collapse;
+          background: white;
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+          border: 1px solid #F1F2F4;
+        }
+
+        .replix-table th, .replix-table td {
+          padding: 20px 24px;
+          text-align: left;
+          border-bottom: 1px solid #F1F2F4;
+        }
+
+        .replix-table th {
+          background: #FAFAFA;
+          font-size: 16px;
+          font-weight: 700;
+          color: #1A1A1A;
+        }
+        
+        .replix-table th:not(:first-child), .replix-table td:not(:first-child) {
+          text-align: center;
+        }
+
+        .replix-table td {
+          font-size: 15px;
+          color: #202223;
+        }
+        
+        .replix-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        /* FAQ */
+        .replix-faq-section {
+          max-width: 800px;
+          margin: 0 auto 80px auto;
+        }
+
+        .replix-faq-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+        }
+
+        .replix-faq-item h4 {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1A1A1A;
+          margin: 0 0 8px 0;
+        }
+
+        .replix-faq-item p {
+          font-size: 15px;
+          color: #5C5F62;
+          line-height: 1.6;
+          margin: 0;
+        }
+
+        /* Trust Section */
+        .replix-trust-section {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 40px;
+          padding: 40px 0;
+          border-top: 1px solid #E4E5E7;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .replix-trust-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          color: #202223;
+        }
+
+        /* Responsive */
+        @media (max-width: 1000px) {
+          .replix-pricing-grid { grid-template-columns: repeat(2, 1fr); }
+          .replix-plan-recommended { transform: none; z-index: 1; }
+          .replix-plan-recommended:hover { transform: translateY(-8px); }
+          .replix-faq-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+          .replix-pricing-grid { grid-template-columns: 1fr; }
+          .replix-header h1 { font-size: 32px; }
+          .replix-table { display: block; overflow-x: auto; }
+          .replix-trust-section { flex-direction: column; gap: 20px; align-items: flex-start; }
+        }
+      `}</style>
+
+      <div className="replix-billing-page">
+        {/* Header */}
+        <div className="replix-header">
+          <h1>Simple, Transparent Pricing</h1>
+          <p>Choose the perfect plan for your business. Upgrade anytime as your store grows.</p>
+        </div>
+
+        {/* Pricing Cards */}
+        <div className="replix-pricing-grid">
+          {/* FREE PLAN */}
+          <div className="replix-plan-card">
+            <h2 className="replix-plan-name">FREE</h2>
+            <div className="replix-plan-price">$0<span>/month</span></div>
+            <ul className="replix-features-list">
+              <li className="replix-feature-item"><CheckIcon/> 50 AI replies/month</li>
+              <li className="replix-feature-item"><CheckIcon/> Basic Analytics</li>
+              <li className="replix-feature-item"><CheckIcon/> 1 Store</li>
+              <li className="replix-feature-item"><CheckIcon/> Manual Review Publishing</li>
+              <li className="replix-feature-item"><CheckIcon/> Email Support</li>
+            </ul>
+            {plan === "free" ? (
+              <>
+                <button className="replix-btn-pricing replix-btn-secondary" disabled>
+                  Current Replix AI Plan
+                </button>
+                <div className="replix-current-plan-notice">
+                  This is your Replix AI subscription. Your Shopify store subscription is managed separately by Shopify.
+                </div>
+              </>
+            ) : (
+              <button className="replix-btn-pricing replix-btn-secondary" onClick={handleDowngrade} disabled={isDowngrading}>
+                {isDowngrading ? "Downgrading..." : "Downgrade to Free"}
+              </button>
+            )}
+          </div>
+
+          {/* GROWTH PLAN */}
+          <div className="replix-plan-card replix-plan-recommended">
+            <div className="replix-badge-popular">MOST POPULAR</div>
+            <h2 className="replix-plan-name">GROWTH</h2>
+            <div className="replix-plan-price">$50<span>/month</span></div>
+            <ul className="replix-features-list">
+              <li className="replix-feature-item"><CheckIcon/> 500 AI replies/month</li>
+              <li className="replix-feature-item"><CheckIcon/> CSV Import</li>
+              <li className="replix-feature-item"><CheckIcon/> Advanced Analytics</li>
+              <li className="replix-feature-item"><CheckIcon/> Judge.me Publishing</li>
+              <li className="replix-feature-item"><CheckIcon/> AI Templates</li>
+              <li className="replix-feature-item"><CheckIcon/> Priority Support</li>
+            </ul>
+            <button 
+              className="replix-btn-pricing replix-btn-brand" 
+              onClick={handleUpgrade} 
+              disabled={isUpgrading || plan === "pro"}
+            >
+              {isUpgrading ? "Upgrading..." : "Upgrade to Growth"}
+            </button>
+          </div>
+
+          {/* PRO PLAN */}
+          <div className="replix-plan-card">
+            <h2 className="replix-plan-name">PRO</h2>
+            <div className="replix-plan-price">$100<span>/month</span></div>
+            <ul className="replix-features-list">
+              <li className="replix-feature-item"><CheckIcon/> Unlimited AI Replies</li>
+              <li className="replix-feature-item"><CheckIcon/> Unlimited Stores</li>
+              <li className="replix-feature-item"><CheckIcon/> Brand Voice</li>
+              <li className="replix-feature-item"><CheckIcon/> Advanced Insights</li>
+              <li className="replix-feature-item"><CheckIcon/> Premium Templates</li>
+              <li className="replix-feature-item"><CheckIcon/> Priority Support</li>
+              <li className="replix-feature-item"><CheckIcon/> Future AI Features</li>
+            </ul>
+            {plan === "pro" ? (
+              <>
+                <button className="replix-btn-pricing replix-btn-primary" disabled>
+                  Current Replix AI Plan
+                </button>
+                <div className="replix-current-plan-notice">
+                  This is your Replix AI subscription. Your Shopify store subscription is managed separately by Shopify.
+                </div>
+              </>
+            ) : (
+              <button 
+                className="replix-btn-pricing replix-btn-primary" 
+                onClick={handleUpgrade} 
+                disabled={isUpgrading}
+              >
+                {isUpgrading ? "Upgrading..." : "Upgrade to Pro"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Feature Comparison */}
+        <div className="replix-comparison-section">
+          <h3 className="replix-section-title">Compare Features</h3>
+          <table className="replix-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Free</th>
+                <th>Growth</th>
+                <th>Pro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>AI Replies</td>
+                <td>50/month</td>
+                <td>500/month</td>
+                <td>Unlimited</td>
+              </tr>
+              <tr>
+                <td>Analytics</td>
+                <td>Basic</td>
+                <td>Advanced</td>
+                <td>Advanced Insights</td>
+              </tr>
+              <tr>
+                <td>CSV Import</td>
+                <td><CrossIcon /></td>
+                <td><CheckIcon /></td>
+                <td><CheckIcon /></td>
+              </tr>
+              <tr>
+                <td>Judge.me Publishing</td>
+                <td><CrossIcon /></td>
+                <td><CheckIcon /></td>
+                <td><CheckIcon /></td>
+              </tr>
+              <tr>
+                <td>AI Templates</td>
+                <td><CrossIcon /></td>
+                <td><CheckIcon /></td>
+                <td>Premium</td>
+              </tr>
+              <tr>
+                <td>Brand Voice</td>
+                <td><CrossIcon /></td>
+                <td><CrossIcon /></td>
+                <td><CheckIcon /></td>
+              </tr>
+              <tr>
+                <td>Priority Support</td>
+                <td><CrossIcon /></td>
+                <td><CheckIcon /></td>
+                <td><CheckIcon /></td>
+              </tr>
+              <tr>
+                <td>Future Features</td>
+                <td><CrossIcon /></td>
+                <td><CrossIcon /></td>
+                <td><CheckIcon /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="replix-faq-section">
+          <h3 className="replix-section-title">Frequently Asked Questions</h3>
+          <div className="replix-faq-grid">
+            <div className="replix-faq-item">
+              <h4>Can I upgrade anytime?</h4>
+              <p>Yes, you can upgrade your plan at any time. The billing will be prorated automatically by Shopify.</p>
+            </div>
+            <div className="replix-faq-item">
+              <h4>Can I cancel anytime?</h4>
+              <p>Absolutely. You can downgrade to the Free plan at any time without any cancellation fees.</p>
+            </div>
+            <div className="replix-faq-item">
+              <h4>Does Shopify handle billing?</h4>
+              <p>Yes, all charges are securely processed through your existing Shopify invoice. We don't store your credit card.</p>
+            </div>
+            <div className="replix-faq-item">
+              <h4>Are future updates included?</h4>
+              <p>Yes! Our Growth and Pro plans include all future AI updates and templates automatically.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust Section */}
+        <div className="replix-trust-section">
+          <div className="replix-trust-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#008060" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Trusted by Shopify Merchants
+          </div>
+          <div className="replix-trust-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#008060" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            Fast setup
+          </div>
+          <div className="replix-trust-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#008060" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Secure Shopify Billing
+          </div>
+          <div className="replix-trust-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#008060" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+            Cancel anytime
+          </div>
+          <div className="replix-trust-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#008060" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            No hidden fees
+          </div>
+        </div>
+
       </div>
-    </div>
+    </>
   );
 }

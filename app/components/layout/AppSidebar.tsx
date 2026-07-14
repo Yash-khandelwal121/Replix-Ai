@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@remix-run/react";
+import { Link, useLocation, useRouteLoaderData } from "@remix-run/react";
 import { 
   HomeIcon, 
   ChatIcon, 
@@ -83,24 +83,41 @@ export default function AppSidebar() {
         alignItems: "center",
         gap: "10px"
       }}>
-        <div style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "50%",
-          backgroundColor: "var(--color-primary)",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: "bold",
-          fontSize: "14px"
-        }}>
-          MS
-        </div>
-        <div>
-          <div style={{ fontSize: "14px", fontWeight: 600 }}>My Store</div>
-          <div style={{ fontSize: "12px", color: "var(--color-primary)" }}>● Pro Plan</div>
-        </div>
+        {(() => {
+          const appData = useRouteLoaderData("routes/app") as any;
+          const shopStr = appData?.shop || "My Store";
+          const shopName = shopStr.replace(".myshopify.com", "");
+          const initials = shopName.substring(0, 2).toUpperCase();
+          const isPro = appData?.plan === "pro";
+          const planName = isPro ? "Pro Plan" : "Free Plan";
+
+          return (
+            <>
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                backgroundColor: isPro ? "var(--color-primary)" : "#6B7280",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: "bold",
+                fontSize: "14px"
+              }}>
+                {initials}
+              </div>
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontSize: "14px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {shopName}
+                </div>
+                <div style={{ fontSize: "12px", color: isPro ? "var(--color-primary)" : "#6B7280" }}>
+                  ● {planName}
+                </div>
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

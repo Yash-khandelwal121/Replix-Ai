@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useSubmit, useNavigation, useNavigate, useFetcher } from "@remix-run/react";
+import { useLoaderData, useSubmit, useNavigation, useNavigate, useFetcher, Form } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { db } from "../db.server";
 import { Button, Tooltip, Icon, TextField, Select, Modal, FormLayout, BlockStack, Text } from "@shopify/polaris";
@@ -67,11 +67,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (intent === "create_manual") {
     const customerName = formData.get("customerName")?.toString();
     const productName = formData.get("productName")?.toString();
+    const productId = formData.get("productId")?.toString();
     const rating = parseInt(formData.get("rating")?.toString() || "5", 10);
     const body = formData.get("body")?.toString();
 
-    if (!customerName || !body) {
-      return json({ error: "Customer Name and Review are required." }, { status: 400 });
+    if (!customerName || !body || !productId) {
+      return json({ error: "Customer Name, Product, and Review are required." }, { status: 400 });
     }
 
     try {
@@ -79,6 +80,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         data: {
           shop: session.shop,
           customerName,
+          productId,
           productName: productName || null,
           rating,
           body,
@@ -113,6 +115,7 @@ export default function ReviewsList() {
   const [manualForm, setManualForm] = useState({
     customerName: "",
     productName: "",
+    productId: "",
     rating: "5",
     body: ""
   });
@@ -129,7 +132,7 @@ export default function ReviewsList() {
       } else {
         showToast("Review created successfully!");
         setIsManualModalOpen(false);
-        setManualForm({ customerName: "", productName: "", rating: "5", body: "" });
+        setManualForm({ customerName: "", productName: "", productId: "", rating: "5", body: "" });
       }
       // Reload the page data
       submit({ search, page }, { method: "get" });
@@ -141,15 +144,30 @@ export default function ReviewsList() {
   const toggleModal = useCallback(() => setIsManualModalOpen((open) => !open), []);
 
   const handleManualSave = () => {
-    if (!manualForm.customerName || !manualForm.body) {
-      showToast("Customer Name and Review are required", true);
+    if (!manualForm.customerName || !manualForm.body || !manualForm.productId) {
+      showToast("Customer Name, Product, and Review are required", true);
       return;
     }
     fetcher.submit({ ...manualForm, intent: "create_manual" }, { method: "post" });
   };
 
+  const handleSelectProduct = async () => {
+    const selected = await shopify.resourcePicker({ type: 'product', action: 'select', multiple: false });
+    if (selected && selected.length > 0) {
+      const product = selected[0];
+      const numericId = product.id.split('/').pop();
+      setManualForm(prev => ({
+        ...prev,
+        productId: numericId,
+        productName: product.title
+      }));
+    }
+  };
+
   const handleSync = () => {
-    fetcher.submit({ intent: "sync" }, { method: "post", action: "/api/reviews/sync" });
+    const formData = new FormData();
+    formData.append("intent", "sync");
+    fetcher.submit(formData, { method: "post", action: "/api/reviews/sync" });
   };
 
   const handleSearch = (value: string) => {
@@ -177,12 +195,17 @@ export default function ReviewsList() {
           <Button onClick={toggleModal}>
             Add Manual
           </Button>
-          <Button onClick={() => navigate("/app/reviews/import")}>
-            Import CSV
-          </Button>
-          <Button variant="primary" loading={isSyncing} onClick={handleSync}>
-            Sync Reviews
-          </Button>
+          <Form method="get" action="/app/reviews/import">
+            <Button submit>
+              Import CSV
+            </Button>
+          </Form>
+          <fetcher.Form method="post" action="/api/reviews/sync">
+            <input type="hidden" name="intent" value="sync" />
+            <Button submit variant="primary" loading={isSyncing}>
+              Sync Reviews
+            </Button>
+          </fetcher.Form>
         </div>
       </div>
 
@@ -285,12 +308,13 @@ export default function ReviewsList() {
                 autoComplete="off"
                 requiredIndicator
               />
-              <TextField
-                label="Product Name"
-                value={manualForm.productName}
-                onChange={(v) => setManualForm(p => ({...p, productName: v}))}
-                autoComplete="off"
-              />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <Text as="p" variant="bodyMd">Product <span style={{ color: 'red' }}>*</span></Text>
+                <div style={{ marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <Button onClick={handleSelectProduct}>Select Product</Button>
+                  {manualForm.productName && <Text as="span" variant="bodyMd" fontWeight="semibold">{manualForm.productName}</Text>}
+                </div>
+              </div>
             </FormLayout.Group>
             
             <Select

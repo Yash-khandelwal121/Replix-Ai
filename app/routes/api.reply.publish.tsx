@@ -36,13 +36,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (!reply) {
+  const provider = review.provider?.toLowerCase() || "judgeme";
+
+  if (!reply && provider !== "manual" && provider !== "csv") {
     return json({ error: "Reply not found" }, { status: 404 });
   }
 
-  const provider = review.provider?.toLowerCase() || "judgeme";
-
   try {
+    if (provider === "manual" || provider === "csv") {
+      await db.review.update({
+        where: { id: review.id },
+        data: { status: "published" }
+      });
+      
+      if (reply) {
+        await db.reply.update({
+          where: { reviewId: review.id },
+          data: { publishedAt: new Date() }
+        });
+      }
+
+      await db.usageLog.create({
+        data: { shop, action: "publish", reviewId: review.id }
+      });
+
+      return json({ success: true, action: "publish" });
+    }
+
     if (provider === "judgeme") {
       if (!settings?.judgeMeApiToken) {
         return json({ error: "Judge.me API Token is not configured." }, { status: 400 });
@@ -52,19 +72,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
       await publishReply(review.judgeMeId, reply.body, settings.judgeMeApiToken);
     } else if (provider === "loox") {
-      if (!settings?.looxApiToken) {
-        return json({ error: "Loox API Token is not configured." }, { status: 400 });
-      }
-      // TODO: Implement actual Loox API call
-      console.log("Mock Loox publish:", review.id);
-    } else if (provider === "manual" || provider === "csv") {
-      // Just mark as published in the local DB
-      console.log(`Publishing ${provider} review locally:`, review.id);
+      return json({ error: "Loox integration is coming soon." }, { status: 400 });
     } else {
       return json({ error: "Unknown provider" }, { status: 400 });
     }
 
-    // Update local DB to mark as published
+    // Update local DB to mark as published (for external providers)
     await db.review.update({
       where: { id: review.id },
       data: { status: "published" }

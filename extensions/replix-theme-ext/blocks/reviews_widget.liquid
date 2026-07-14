@@ -1,0 +1,760 @@
+<div id="replix-reviews-widget-{{ section.id }}" class="replix-reviews-container">
+  <div class="replix-header">
+    <div class="replix-header-left">
+      <h2 class="replix-title">Customer Reviews</h2>
+      <div class="replix-summary" id="replix-summary-{{ section.id }}">
+        <div class="replix-stars-aggregate" id="replix-stars-aggregate-{{ section.id }}"></div>
+        <span class="replix-count" id="replix-count-{{ section.id }}">Loading reviews...</span>
+      </div>
+    </div>
+    <div class="replix-controls" id="replix-controls-{{ section.id }}" style="display: none;">
+      <span class="replix-sort-label">Sort</span>
+      <select id="replix-sort-{{ section.id }}" class="replix-sort-select" aria-label="Sort reviews">
+        <option value="newest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="highest">Highest Rating</option>
+        <option value="lowest">Lowest Rating</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="replix-carousel-wrapper" id="replix-carousel-wrapper-{{ section.id }}">
+    <button class="replix-nav-btn replix-nav-prev" id="replix-nav-prev-{{ section.id }}" aria-label="Previous reviews" style="display: none;">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+    </button>
+
+    <div id="replix-reviews-list-{{ section.id }}" class="replix-reviews-carousel" aria-live="polite">
+      <!-- Reviews injected here -->
+    </div>
+
+    <button class="replix-nav-btn replix-nav-next" id="replix-nav-next-{{ section.id }}" aria-label="Next reviews" style="display: none;">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+    </button>
+  </div>
+
+  <div class="replix-load-more-container">
+    <button id="replix-load-more-{{ section.id }}" class="replix-load-more-btn" style="display: none;">Load More</button>
+  </div>
+</div>
+
+<style>
+  #replix-reviews-widget-{{ section.id }} {
+    --r-card-bg: {{ block.settings.card_bg }};
+    --r-reply-bg: {{ block.settings.reply_bg }};
+    --r-radius: {{ block.settings.card_radius }}px;
+    --r-heading: {{ block.settings.heading_color }};
+    --r-text: {{ block.settings.text_color }};
+    --r-stars: {{ block.settings.star_color }};
+    --r-brand: {{ block.settings.brand_color }};
+    --r-badge: {{ block.settings.badge_color }};
+    
+    {% if block.settings.card_shadow == 'none' %}
+      --r-shadow: none;
+      --r-hover-shadow: none;
+    {% elsif block.settings.card_shadow == 'soft' %}
+      --r-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+      --r-hover-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+    {% elsif block.settings.card_shadow == 'medium' %}
+      --r-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      --r-hover-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+    {% elsif block.settings.card_shadow == 'strong' %}
+      --r-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+      --r-hover-shadow: 0 24px 48px rgba(0, 0, 0, 0.16);
+    {% endif %}
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  #replix-reviews-widget-{{ section.id }} * {
+    box-sizing: border-box;
+  }
+  
+  .replix-reviews-container {
+    width: 100%;
+    margin: 40px 0;
+    padding: 20px;
+    color: var(--r-text);
+  }
+  
+  /* Header Layout */
+  .replix-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .replix-header {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  }
+
+  .replix-header-left {
+    display: flex;
+    flex-direction: column;
+  }
+  @media (max-width: 640px) {
+    .replix-header-left { align-items: center; }
+  }
+
+  .replix-title {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--r-heading);
+    margin: 0 0 16px 0;
+    line-height: 1.2;
+  }
+  .replix-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (max-width: 640px) {
+    .replix-summary { align-items: center; }
+  }
+
+  .replix-stars-aggregate-large {
+    color: var(--r-stars);
+    font-size: 30px;
+    letter-spacing: 2px;
+  }
+  .replix-summary-text {
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--r-text);
+  }
+  .replix-summary-text strong {
+    font-size: 20px;
+    color: var(--r-heading);
+    font-weight: 700;
+  }
+  
+  .replix-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .replix-sort-label {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--r-heading);
+  }
+  .replix-sort-select {
+    padding: 12px 36px 12px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--r-heading);
+    background-color: #fff;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    min-width: 180px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%234b5563%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px top 50%;
+    background-size: 12px auto;
+  }
+  .replix-sort-select:focus-visible {
+    border-color: var(--r-brand);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  }
+
+  /* Carousel Wrapper */
+  .replix-carousel-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .replix-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--r-heading);
+    transition: all 0.2s ease;
+  }
+  .replix-nav-btn:hover {
+    background: #f9fafb;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  }
+  .replix-nav-prev { left: -15px; }
+  .replix-nav-next { right: -15px; }
+  
+  @media (max-width: 768px) {
+    .replix-nav-btn { display: none !important; }
+  }
+
+  /* Carousel */
+  .replix-reviews-carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 24px;
+    padding: 10px 10px 40px 10px;
+    width: 100%;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+  }
+  .replix-reviews-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Centered layouts for few reviews */
+  .replix-reviews-carousel[data-count="1"], 
+  .replix-reviews-carousel[data-count="2"] {
+    justify-content: center;
+  }
+  
+  .replix-reviews-carousel[data-count="1"] {
+    overflow-x: hidden;
+  }
+  
+  /* Featured Review Styling */
+  .replix-reviews-carousel[data-count="1"] .replix-review-card {
+    flex: 0 0 100%;
+    max-width: 560px;
+    padding: 32px;
+    box-shadow: var(--r-hover-shadow);
+  }
+
+  @keyframes replixFadeIn { 
+    from { opacity: 0; transform: translateY(15px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
+
+  /* Review Card (Responsive 3/2/1) */
+  .replix-review-card {
+    /* Desktop: roughly 3 cards visible depending on container width */
+    flex: 0 0 calc(33.333% - 16px);
+    min-width: 380px;
+    scroll-snap-align: center;
+    background: var(--r-card-bg);
+    border: 1px solid #f3f4f6;
+    border-radius: var(--r-radius);
+    padding: 28px;
+    box-shadow: var(--r-shadow);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: replixFadeIn 0.5s ease backwards;
+  }
+  .replix-review-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--r-hover-shadow);
+  }
+
+  @media (max-width: 1100px) {
+    /* Tablet: 2 cards visible */
+    .replix-review-card { 
+      flex: 0 0 calc(50% - 12px); 
+      min-width: 320px;
+    }
+  }
+  @media (max-width: 768px) {
+    /* Mobile: 1 card visible */
+    .replix-review-card { 
+      flex: 0 0 calc(100% - 20px); 
+      min-width: 100%;
+    }
+    .replix-reviews-carousel { 
+      padding-left: 0; 
+      padding-right: 0; 
+    }
+  }
+
+  /* Card Header (Avatar + Name + Date) */
+  .replix-review-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .replix-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--r-brand);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 18px;
+    overflow: hidden;
+    flex-shrink: 0;
+    margin-right: 14px;
+  }
+  .replix-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .replix-reviewer-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .replix-reviewer-name {
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--r-heading);
+  }
+  .replix-verified-badge {
+    color: var(--r-badge);
+    display: flex;
+    align-items: center;
+  }
+  .replix-review-date {
+    font-size: 14px;
+    color: #9ca3af;
+    margin-left: auto; /* Push date to the far right */
+  }
+  
+  /* Stars */
+  .replix-review-stars-row {
+    margin-top: 8px;
+    margin-bottom: 24px;
+    color: var(--r-stars);
+    font-size: 20px;
+    letter-spacing: 2px;
+  }
+
+  /* Title & Body */
+  .replix-review-title {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--r-heading);
+    margin: 0 0 14px 0;
+    line-height: 1.4;
+  }
+  .replix-review-body {
+    color: var(--r-text);
+    line-height: 1.7;
+    margin: 0;
+    font-size: 16px;
+    flex-grow: 1;
+  }
+
+  /* Merchant Reply */
+  .replix-reply-card {
+    margin-top: 24px;
+    padding: 20px;
+    background: var(--r-reply-bg);
+    border-radius: 12px;
+    border-left: 4px solid var(--r-brand);
+    position: relative;
+  }
+  .replix-reply-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: var(--r-heading);
+    font-size: 15px;
+  }
+  .replix-reply-body {
+    color: var(--r-text);
+    line-height: 1.6;
+    margin: 0;
+    font-size: 15px;
+  }
+  
+  /* Load More */
+  .replix-load-more-container {
+    text-align: center;
+    margin-top: 20px;
+  }
+  .replix-load-more-btn {
+    padding: 14px 40px;
+    background: var(--r-heading);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .replix-load-more-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+  .replix-load-more-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Empty State */
+  .replix-empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--r-card-bg);
+    border-radius: var(--r-radius);
+    border: 1px dashed #e5e7eb;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .replix-empty-icon {
+    width: 80px;
+    height: 80px;
+    color: #d1d5db;
+    margin: 0 auto 24px auto;
+  }
+  .replix-empty-title {
+    margin: 0 0 12px 0;
+    color: var(--r-heading);
+    font-weight: 700;
+    font-size: 24px;
+  }
+  .replix-empty-desc {
+    color: var(--r-text);
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+</style>
+
+<script>
+  (function() {
+    const productId = "{{ product.id }}";
+    const sectionId = "{{ section.id }}";
+    const storeName = "{{ shop.name }}";
+    
+    let skip = 0;
+    const take = 10;
+    let currentSort = "newest";
+    let isFetching = false;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      const sortSelect = document.getElementById(`replix-sort-${sectionId}`);
+      const loadMoreBtn = document.getElementById(`replix-load-more-${sectionId}`);
+      
+      // Carousel navigation buttons
+      const prevBtn = document.getElementById(`replix-nav-prev-${sectionId}`);
+      const nextBtn = document.getElementById(`replix-nav-next-${sectionId}`);
+      const listContainer = document.getElementById(`replix-reviews-list-${sectionId}`);
+
+      prevBtn.addEventListener('click', () => {
+        const cardWidth = listContainer.querySelector('.replix-review-card')?.offsetWidth || 400;
+        listContainer.scrollBy({ left: -(cardWidth + 24), behavior: 'smooth' });
+      });
+
+      nextBtn.addEventListener('click', () => {
+        const cardWidth = listContainer.querySelector('.replix-review-card')?.offsetWidth || 400;
+        listContainer.scrollBy({ left: cardWidth + 24, behavior: 'smooth' });
+      });
+      
+      sortSelect.addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        skip = 0;
+        listContainer.innerHTML = '';
+        fetchReviews(true);
+      });
+      
+      loadMoreBtn.addEventListener('click', () => {
+        if (!isFetching) {
+          fetchReviews(false);
+        }
+      });
+      
+      fetchReviews(true);
+    });
+
+    async function fetchReviews(isInitialLoad) {
+      isFetching = true;
+      const listContainer = document.getElementById(`replix-reviews-list-${sectionId}`);
+      const summaryContainer = document.getElementById(`replix-summary-${sectionId}`);
+      const controls = document.getElementById(`replix-controls-${sectionId}`);
+      const loadMoreBtn = document.getElementById(`replix-load-more-${sectionId}`);
+      const prevBtn = document.getElementById(`replix-nav-prev-${sectionId}`);
+      const nextBtn = document.getElementById(`replix-nav-next-${sectionId}`);
+      
+      try {
+        const cacheBuster = new Date().getTime();
+        const response = await fetch(`/apps/replix/reviews?productId=${productId}&skip=${skip}&take=${take}&sort=${currentSort}&_t=${cacheBuster}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch reviews');
+        }
+
+        const data = await response.json();
+        const reviews = data.reviews || [];
+        
+        if (isInitialLoad && reviews.length === 0) {
+          summaryContainer.innerHTML = '';
+          
+          const emptyState = document.createElement('div');
+          emptyState.className = 'replix-empty-state';
+          emptyState.innerHTML = `
+            <div class="replix-empty-icon">
+              <svg width="100%" height="100%" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+              </svg>
+            </div>
+            <h3 class="replix-empty-title">No reviews yet</h3>
+            <p class="replix-empty-desc">Be the first to share your experience.</p>
+          `;
+          listContainer.innerHTML = '';
+          listContainer.appendChild(emptyState);
+          controls.style.display = 'none';
+          prevBtn.style.display = 'none';
+          nextBtn.style.display = 'none';
+          return;
+        }
+
+        if (isInitialLoad) {
+          controls.style.display = 'flex';
+          listContainer.innerHTML = '';
+          
+          summaryContainer.innerHTML = `
+            <div class="replix-stars-aggregate-large">${getStarsHtml(Math.round(data.averageRating))}</div>
+            <div class="replix-summary-text">
+              <strong>${data.averageRating} out of 5</strong><br>
+              Based on ${data.totalCount} review${data.totalCount !== 1 ? 's' : ''}
+            </div>
+          `;
+        }
+
+        reviews.forEach(review => {
+          listContainer.appendChild(createReviewElement(review, storeName));
+        });
+
+        // Update layout state
+        if (isInitialLoad) {
+          listContainer.setAttribute('data-count', data.totalCount);
+        }
+
+        // Arrow visibility logic
+        let visibleCards = 3;
+        if (window.innerWidth <= 768) {
+          visibleCards = 1;
+        } else if (window.innerWidth <= 1100) {
+          visibleCards = 2;
+        }
+
+        if (data.totalCount > visibleCards) {
+          prevBtn.style.display = 'flex';
+          nextBtn.style.display = 'flex';
+        } else {
+          prevBtn.style.display = 'none';
+          nextBtn.style.display = 'none';
+        }
+
+        skip += reviews.length;
+        
+        if (data.hasMore) {
+          loadMoreBtn.style.display = 'inline-block';
+          loadMoreBtn.textContent = 'Load More';
+        } else {
+          loadMoreBtn.style.display = 'none';
+        }
+
+      } catch (error) {
+        console.error('Error loading Replix reviews:', error);
+        if (isInitialLoad) {
+          listContainer.innerHTML = '<p style="text-align:center; color:red;">Failed to load reviews.</p>';
+        }
+      } finally {
+        isFetching = false;
+      }
+    }
+
+    function createReviewElement(review, storeName) {
+      const card = document.createElement('div');
+      card.className = 'replix-review-card';
+      card.setAttribute('role', 'article');
+      card.setAttribute('aria-label', `Review by ${review.customerName || 'Anonymous'}`);
+
+      // 1. Header Row (Avatar, Name, Badge on left; Date on right)
+      const header = document.createElement('div');
+      header.className = 'replix-review-header';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'replix-avatar';
+      if (review.customerAvatar) {
+        const img = document.createElement('img');
+        img.src = review.customerAvatar;
+        img.alt = '';
+        avatar.appendChild(img);
+      } else {
+        avatar.textContent = (review.customerName || 'A').charAt(0).toUpperCase();
+      }
+
+      const nameWrap = document.createElement('div');
+      nameWrap.className = 'replix-reviewer-name-wrap';
+      
+      const name = document.createElement('span');
+      name.className = 'replix-reviewer-name';
+      name.textContent = review.customerName || 'Anonymous';
+      nameWrap.appendChild(name);
+
+      if (review.provider && review.provider !== 'manual') {
+        const badge = document.createElement('span');
+        badge.className = 'replix-verified-badge';
+        badge.setAttribute('aria-label', 'Verified Buyer');
+        badge.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>`;
+        badge.title = "Verified Buyer";
+        nameWrap.appendChild(badge);
+      }
+
+      const dateStr = document.createElement('div');
+      dateStr.className = 'replix-review-date';
+      dateStr.textContent = new Date(review.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+      header.appendChild(avatar);
+      header.appendChild(nameWrap);
+      header.appendChild(dateStr);
+
+      // 2. Stars below header
+      const starsRow = document.createElement('div');
+      starsRow.className = 'replix-review-stars-row';
+      starsRow.setAttribute('aria-label', `${review.rating} out of 5 stars`);
+      starsRow.innerHTML = getStarsHtml(review.rating);
+
+      card.appendChild(header);
+      card.appendChild(starsRow);
+
+      // 3. Title
+      if (review.title) {
+        const title = document.createElement('h3');
+        title.className = 'replix-review-title';
+        title.textContent = review.title;
+        card.appendChild(title);
+      }
+
+      // 4. Body
+      const body = document.createElement('p');
+      body.className = 'replix-review-body';
+      body.textContent = review.body || '';
+      card.appendChild(body);
+
+      // 5. Merchant Reply
+      if (review.reply && review.reply.body) {
+        const replyCard = document.createElement('div');
+        replyCard.className = 'replix-reply-card';
+        
+        const replyHeader = document.createElement('div');
+        replyHeader.className = 'replix-reply-header';
+        replyHeader.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+        const replyHeaderText = document.createTextNode(` Response from ${storeName}`);
+        replyHeader.appendChild(replyHeaderText);
+        
+        const replyBody = document.createElement('p');
+        replyBody.className = 'replix-reply-body';
+        replyBody.textContent = review.reply.body;
+
+        replyCard.appendChild(replyHeader);
+        replyCard.appendChild(replyBody);
+        card.appendChild(replyCard);
+      }
+
+      return card;
+    }
+
+    function getStarsHtml(rating) {
+      let html = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+          html += '★';
+        } else {
+          html += '☆';
+        }
+      }
+      return html;
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Replix Reviews Widget",
+  "target": "section",
+  "templates": ["product"],
+  "settings": [
+    { 
+      "type": "color", 
+      "id": "star_color", 
+      "label": "Star Color", 
+      "default": "#FFB800" 
+    },
+    { 
+      "type": "color", 
+      "id": "brand_color", 
+      "label": "Brand Color (for AI Replies & Badges)", 
+      "default": "#000000" 
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "unit": "px",
+      "label": "Card Border Radius",
+      "default": 20
+    },
+    {
+      "type": "select",
+      "id": "card_shadow",
+      "label": "Card Shadow",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "soft", "label": "Soft" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "strong", "label": "Strong" }
+      ],
+      "default": "soft"
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "reply_bg",
+      "label": "Reply Background",
+      "default": "#f9fafb"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#111827"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#4b5563"
+    },
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "Verified Badge Color",
+      "default": "#008060"
+    }
+  ]
+}
+{% endschema %}
