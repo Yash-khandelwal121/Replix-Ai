@@ -195,17 +195,12 @@ export default function ReviewsList() {
           <Button onClick={toggleModal}>
             Add Manual
           </Button>
-          <Form method="get" action="/app/reviews/import">
-            <Button submit>
-              Import CSV
-            </Button>
-          </Form>
-          <fetcher.Form method="post" action="/api/reviews/sync">
-            <input type="hidden" name="intent" value="sync" />
-            <Button submit variant="primary" loading={isSyncing}>
-              Sync Reviews
-            </Button>
-          </fetcher.Form>
+          <Button onClick={() => navigate("/app/reviews-import")}>
+            Import CSV
+          </Button>
+          <Button variant="primary" loading={isSyncing} onClick={handleSync}>
+            Sync Reviews
+          </Button>
         </div>
       </div>
 
