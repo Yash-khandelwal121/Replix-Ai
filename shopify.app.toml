@@ -2,7 +2,7 @@
 
 client_id = "69be8548ba370a7830eb472fc66efc02"
 name = "replix-ai"
-application_url = "https://example.com"
+application_url = "https://replix-ai-black.vercel.app"
 embedded = true
 
 [access_scopes]
@@ -26,13 +26,12 @@ api_version = "2026-10"
   shop_deletion_url = "/webhooks/shop/redact"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://replix-ai-black.vercel.app/api/auth", "https://replix-ai-black.vercel.app/auth/callback", "https://replix-ai-black.vercel.app/auth/shopify/callback" ]
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
 
 [app_proxy]
-url = "https://example.com/api/proxy"
+url = "https://replix-ai-black.vercel.app/api/proxy"
 subpath = "replix"
 prefix = "apps"
