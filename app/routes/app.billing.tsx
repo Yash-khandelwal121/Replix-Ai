@@ -41,7 +41,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
-  if (intent === "upgrade") {
+  if (intent === "upgrade" || intent === "upgrade_growth" || intent === "upgrade_pro") {
     const { session } = await authenticate.admin(request);
     
     // Check if they already have the plan on Shopify's end
@@ -117,11 +117,13 @@ export default function Billing() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const isUpgrading = navigation.state === "submitting" && navigation.formData?.get("intent") === "upgrade";
+  const isUpgradingGrowth = navigation.state === "submitting" && navigation.formData?.get("intent") === "upgrade_growth";
+  const isUpgradingPro = navigation.state === "submitting" && navigation.formData?.get("intent") === "upgrade_pro";
   const isDowngrading = navigation.state === "submitting" && navigation.formData?.get("intent") === "downgrade";
 
   // Both upgrade buttons use the exact same logic (to respect existing backend limitations)
-  const handleUpgrade = () => submit({ intent: "upgrade" }, { method: "post" });
+  const handleUpgradeGrowth = () => submit({ intent: "upgrade_growth" }, { method: "post" });
+  const handleUpgradePro = () => submit({ intent: "upgrade_pro" }, { method: "post" });
   const handleDowngrade = () => submit({ intent: "downgrade" }, { method: "post" });
 
   useEffect(() => {
@@ -499,10 +501,10 @@ export default function Billing() {
             </ul>
             <button 
               className="replix-btn-pricing replix-btn-brand" 
-              onClick={handleUpgrade} 
-              disabled={isUpgrading || plan === "pro"}
+              onClick={handleUpgradeGrowth} 
+              disabled={isUpgradingGrowth || isUpgradingPro || plan === "pro"}
             >
-              {isUpgrading ? "Upgrading..." : "Upgrade to Growth"}
+              {isUpgradingGrowth ? "Upgrading..." : "Upgrade to Growth"}
             </button>
           </div>
 
@@ -531,10 +533,10 @@ export default function Billing() {
             ) : (
               <button 
                 className="replix-btn-pricing replix-btn-primary" 
-                onClick={handleUpgrade} 
-                disabled={isUpgrading}
+                onClick={handleUpgradePro} 
+                disabled={isUpgradingGrowth || isUpgradingPro}
               >
-                {isUpgrading ? "Upgrading..." : "Upgrade to Pro"}
+                {isUpgradingPro ? "Upgrading..." : "Upgrade to Pro"}
               </button>
             )}
           </div>
