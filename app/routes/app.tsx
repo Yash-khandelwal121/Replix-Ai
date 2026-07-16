@@ -33,7 +33,7 @@ export default function App() {
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <ToastProvider>
-        <div style={{ display: "flex", minHeight: "100vh" }}>
+        <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-bg)" }}>
           <AppSidebar />
           <main style={{ flex: 1, overflowY: "auto", position: "relative" }}>
             <Outlet />
