@@ -4,6 +4,7 @@ import {
   AppDistribution,
   shopifyApp,
   BillingInterval,
+  BillingReplacementBehavior,
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
@@ -23,6 +24,7 @@ const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
   billing: {
     [GROWTH_PLAN]: {
+      replacementBehavior: BillingReplacementBehavior.ApplyImmediately,
       lineItems: [
         {
           amount: 50.00,
@@ -32,6 +34,7 @@ const shopify = shopifyApp({
       ]
     },
     [PRO_PLAN]: {
+      replacementBehavior: BillingReplacementBehavior.ApplyImmediately,
       lineItems: [
         {
           amount: 100.00,
