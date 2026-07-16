@@ -139,7 +139,7 @@ export default function Billing() {
       <style>{`
         .replix-billing-page {
           font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-          background-color: #FAFAFA;
+          background: radial-gradient(circle at top left, #f3e7ff 0%, #e0f2fe 40%, #FAFAFA 100%);
           min-height: 100vh;
           padding: 60px 40px;
           color: #202223;
@@ -154,9 +154,11 @@ export default function Billing() {
         }
 
         .replix-header h1 {
-          font-size: 40px;
+          font-size: 44px;
           font-weight: 800;
-          color: #1A1A1A;
+          background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
           margin: 0 0 16px 0;
           letter-spacing: -0.03em;
         }
@@ -194,7 +196,9 @@ export default function Billing() {
           box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
         }
 
+        /* Growth Plan Specific styling */
         .replix-plan-recommended {
+          background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%);
           border-color: #6366F1;
           box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15);
           transform: scale(1.02);
@@ -203,6 +207,15 @@ export default function Billing() {
         .replix-plan-recommended:hover {
           transform: scale(1.02) translateY(-8px);
           box-shadow: 0 20px 40px rgba(99, 102, 241, 0.25);
+        }
+
+        /* Pro Plan Specific styling */
+        .replix-plan-pro {
+          background: linear-gradient(180deg, #ffffff 0%, #fffbeb 100%);
+          border: 1px solid #fcd34d;
+        }
+        .replix-plan-pro:hover {
+          box-shadow: 0 16px 40px rgba(251, 191, 36, 0.15);
         }
 
         .replix-badge-popular {
@@ -492,7 +505,7 @@ export default function Billing() {
           </div>
 
           {/* PRO PLAN */}
-          <div className="replix-plan-card">
+          <div className="replix-plan-card replix-plan-pro">
             <h2 className="replix-plan-name">PRO</h2>
             <div className="replix-plan-price">$100<span>/month</span></div>
             <ul className="replix-features-list">
