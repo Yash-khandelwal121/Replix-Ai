@@ -161,6 +161,8 @@ export default function Billing() {
           -webkit-text-fill-color: transparent;
           margin: 0 0 16px 0;
           letter-spacing: -0.03em;
+          line-height: 1.4;
+          padding-bottom: 5px;
         }
 
         .replix-header p {
