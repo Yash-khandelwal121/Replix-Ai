@@ -103,6 +103,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
+  const fetcher = useFetcher<any>();
 
   useEffect(() => {
     if (searchParams.get("upgrade") === "success") {
@@ -110,6 +111,22 @@ export default function Dashboard() {
       setSearchParams(new URLSearchParams(), { replace: true });
     }
   }, [searchParams, showToast, setSearchParams]);
+
+  useEffect(() => {
+    if (fetcher.data?.success) {
+      showToast(fetcher.data.isDemo 
+        ? `Demo Mode: Added ${fetcher.data.synced} dummy reviews!` 
+        : `Successfully synced ${fetcher.data.synced} reviews!`);
+    } else if (fetcher.data?.error) {
+      showToast(fetcher.data.error, true);
+    }
+  }, [fetcher.data, showToast]);
+
+  const handleSync = () => {
+    fetcher.submit({ intent: "sync" }, { method: "post", action: "/api/reviews/sync" });
+  };
+
+  const isSyncing = fetcher.state !== "idle" && fetcher.formAction === "/api/reviews/sync";
 
   // Real Data Calculations
   const totalMinutesSaved = data.totalGenerated * 3;
@@ -149,8 +166,13 @@ export default function Dashboard() {
             <button className="banner-btn banner-btn-primary" onClick={() => navigate("/app/reviews")}>
               Generate AI Replies
             </button>
-            <button className="banner-btn banner-btn-white" onClick={() => {}}>
-              Sync Reviews
+            <button 
+              className="banner-btn banner-btn-white" 
+              onClick={handleSync}
+              disabled={isSyncing}
+              style={{ opacity: isSyncing ? 0.7 : 1 }}
+            >
+              {isSyncing ? "Syncing..." : "Sync Reviews"}
             </button>
             <button className="banner-btn banner-btn-white" onClick={() => navigate("/app/templates")}>
               Manage Templates
