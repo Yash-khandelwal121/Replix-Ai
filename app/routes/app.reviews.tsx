@@ -27,6 +27,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
+  const sort = url.searchParams.get("sort") || "newest";
   const page = parseInt(url.searchParams.get("page") || "1");
   const take = 20;
   const skip = (page - 1) * take;
@@ -41,18 +42,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } : {})
   };
 
+  let orderBy: any = { createdAt: "desc" };
+  if (sort === "oldest") orderBy = { createdAt: "asc" };
+  else if (sort === "highest") orderBy = [ { rating: "desc" }, { createdAt: "desc" } ];
+  else if (sort === "lowest") orderBy = [ { rating: "asc" }, { createdAt: "desc" } ];
+  else if (sort === "pending") orderBy = [ { status: "asc" }, { createdAt: "desc" } ];
+
   const [reviews, total] = await Promise.all([
     db.review.findMany({
       where,
       include: { reply: true },
-      orderBy: { createdAt: "desc" },
+      orderBy,
       take,
       skip,
     }),
     db.review.count({ where })
   ]);
 
-  return json({ reviews, total, page, search });
+  return json({ reviews, total, page, search, sort });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -100,7 +107,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function ReviewsList() {
-  const { reviews, total, page, search } = useLoaderData<typeof loader>();
+  const { reviews, total, page, search, sort } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const navigation = useNavigation();
   const fetcher = useFetcher<any>();
@@ -108,7 +115,7 @@ export default function ReviewsList() {
   const { showToast } = useToast();
   
   const [searchValue, setSearchValue] = useState(search);
-  const [sortValue, setSortValue] = useState("newest");
+  const [sortValue, setSortValue] = useState(sort);
   
   // Manual Review Modal State
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -135,11 +142,11 @@ export default function ReviewsList() {
         setManualForm({ customerName: "", productName: "", productId: "", rating: "5", body: "" });
       }
       // Reload the page data
-      submit({ search, page }, { method: "get" });
+      submit({ search, sort: sortValue, page }, { method: "get" });
     } else if (fetcher.data?.error) {
       showToast(fetcher.data.error, true);
     }
-  }, [fetcher.data, showToast, submit, search, page]);
+  }, [fetcher.data, showToast, submit, search, sortValue, page]);
 
   const toggleModal = useCallback(() => setIsManualModalOpen((open) => !open), []);
 
@@ -172,7 +179,7 @@ export default function ReviewsList() {
 
   const handleSearch = (value: string) => {
     setSearchValue(value);
-    submit({ search: value, page: "1" }, { method: "get" });
+    submit({ search: value, sort: sortValue, page: "1" }, { method: "get" });
   };
 
   return (
@@ -228,7 +235,10 @@ export default function ReviewsList() {
               { label: "Pending first", value: "pending" },
             ]}
             value={sortValue}
-            onChange={(val) => setSortValue(val)}
+            onChange={(val) => {
+              setSortValue(val);
+              submit({ search, sort: val, page: "1" }, { method: "get" });
+            }}
           />
         </div>
       </div>
@@ -270,8 +280,8 @@ export default function ReviewsList() {
               Page {page} of {Math.ceil(total / 20) || 1}
             </span>
             <div style={{ display: "flex", gap: "8px" }}>
-              <Button disabled={page <= 1} onClick={() => submit({ search, page: (page - 1).toString() }, { method: "get" })}>Previous</Button>
-              <Button disabled={page >= Math.ceil(total / 20)} onClick={() => submit({ search, page: (page + 1).toString() }, { method: "get" })}>Next</Button>
+              <Button disabled={page <= 1} onClick={() => submit({ search, sort: sortValue, page: (page - 1).toString() }, { method: "get" })}>Previous</Button>
+              <Button disabled={page >= Math.ceil(total / 20)} onClick={() => submit({ search, sort: sortValue, page: (page + 1).toString() }, { method: "get" })}>Next</Button>
             </div>
           </div>
         </div>
