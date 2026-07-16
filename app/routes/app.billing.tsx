@@ -527,9 +527,9 @@ export default function Billing() {
               <button 
                 className="replix-btn-pricing replix-btn-brand" 
                 onClick={handleUpgradeGrowth} 
-                disabled={isUpgradingGrowth || isUpgradingPro || plan === "pro"}
+                disabled={isUpgradingGrowth || isUpgradingPro}
               >
-                {isUpgradingGrowth ? "Upgrading..." : "Upgrade to Growth"}
+                {isUpgradingGrowth ? "Processing..." : (plan === "pro" ? "Downgrade to Growth" : "Upgrade to Growth")}
               </button>
             )}
           </div>
@@ -562,7 +562,7 @@ export default function Billing() {
                 onClick={handleUpgradePro} 
                 disabled={isUpgradingGrowth || isUpgradingPro}
               >
-                {isUpgradingPro ? "Upgrading..." : "Upgrade to Pro"}
+                {isUpgradingPro ? "Processing..." : "Upgrade to Pro"}
               </button>
             )}
           </div>
