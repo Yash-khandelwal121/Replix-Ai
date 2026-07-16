@@ -244,8 +244,8 @@ export default function ReviewsList() {
           onAction={handleSync}
         />
       ) : (
-        <div className="replix-card" style={{ overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="replix-card" style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1000px" }}>
             <thead style={{ backgroundColor: "var(--color-bg)", borderBottom: "1px solid var(--color-border)" }}>
               <tr>
                 <th style={thStyle}>Customer</th>
