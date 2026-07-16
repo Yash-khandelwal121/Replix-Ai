@@ -1,7 +1,7 @@
 import { json, redirect, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
 import { useLoaderData, useSubmit, useNavigation, useActionData, useNavigate } from "@remix-run/react";
 import { useEffect } from "react";
-import { authenticate, MONTHLY_PLAN } from "../shopify.server";
+import { authenticate, GROWTH_PLAN, PRO_PLAN } from "../shopify.server";
 import { db } from "../db.server";
 import { useToast } from "../components/common/ToastProvider";
 
@@ -10,27 +10,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
 
   const billingCheck = await billing.check({
-    plans: [MONTHLY_PLAN],
+    plans: [GROWTH_PLAN, PRO_PLAN],
     isTest: true,
   });
 
   let settings = await db.shopSettings.findUnique({ where: { shop } });
   let currentPlan = settings?.plan || "free";
 
-  if (billingCheck.hasActivePayment && currentPlan !== "pro") {
+  // Determine active plan from Shopify
+  const activeSubscriptions = billingCheck.appSubscriptions.filter(sub => sub.status === 'ACTIVE');
+  let actualShopifyPlan = "free";
+  
+  if (activeSubscriptions.length > 0) {
+    const planName = activeSubscriptions[0].name;
+    if (planName === GROWTH_PLAN) actualShopifyPlan = "growth";
+    else if (planName === PRO_PLAN) actualShopifyPlan = "pro";
+  }
+
+  // Sync DB with Shopify reality
+  if (currentPlan !== actualShopifyPlan) {
     await db.shopSettings.upsert({
       where: { shop },
-      create: { shop, plan: "pro" },
-      update: { plan: "pro" }
+      create: { shop, plan: actualShopifyPlan },
+      update: { plan: actualShopifyPlan }
     });
-    return redirect("/app?upgrade=success");
-  } else if (!billingCheck.hasActivePayment && currentPlan === "pro") {
-    await db.shopSettings.upsert({
-      where: { shop },
-      create: { shop, plan: "free" },
-      update: { plan: "free" }
-    });
-    currentPlan = "free";
+    currentPlan = actualShopifyPlan;
   }
 
   return json({ plan: currentPlan });
@@ -41,15 +45,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
-  if (intent === "upgrade" || intent === "upgrade_growth" || intent === "upgrade_pro") {
+  if (intent === "upgrade_growth" || intent === "upgrade_pro") {
     const { session } = await authenticate.admin(request);
     
-    // Check if they already have the plan on Shopify's end
+    const targetPlanName = intent === "upgrade_growth" ? GROWTH_PLAN : PRO_PLAN;
+    const targetPlanSlug = intent === "upgrade_growth" ? "growth" : "pro";
+
+    // Check if they already have the target plan on Shopify's end
     await billing.require({
-      plans: [MONTHLY_PLAN],
+      plans: [targetPlanName],
       isTest: true,
       onFailure: async () => billing.request({
-        plan: MONTHLY_PLAN,
+        plan: targetPlanName,
         isTest: true,
       }),
     });
@@ -57,8 +64,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // If we get here, they already have the active subscription on Shopify!
     await db.shopSettings.upsert({
       where: { shop: session.shop },
-      create: { shop: session.shop, plan: "pro" },
-      update: { plan: "pro" }
+      create: { shop: session.shop, plan: targetPlanSlug },
+      update: { plan: targetPlanSlug }
     });
 
     return json({ success: true, alreadyActive: true });
@@ -69,17 +76,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     
     // Check for active subscriptions to cancel
     const billingCheck = await billing.check({
-      plans: [MONTHLY_PLAN],
+      plans: [GROWTH_PLAN, PRO_PLAN],
       isTest: true,
     });
 
-    const subscription = billingCheck.appSubscriptions[0];
-    if (subscription) {
-      await billing.cancel({
-        subscriptionId: subscription.id,
-        isTest: true,
-        prorate: true,
-      });
+    for (const subscription of billingCheck.appSubscriptions) {
+      if (subscription.status === 'ACTIVE') {
+        await billing.cancel({
+          subscriptionId: subscription.id,
+          isTest: true,
+          prorate: true,
+        });
+      }
     }
 
     // Downgrade in our database
@@ -499,13 +507,24 @@ export default function Billing() {
               <li className="replix-feature-item"><CheckIcon/> AI Templates</li>
               <li className="replix-feature-item"><CheckIcon/> Priority Support</li>
             </ul>
-            <button 
-              className="replix-btn-pricing replix-btn-brand" 
-              onClick={handleUpgradeGrowth} 
-              disabled={isUpgradingGrowth || isUpgradingPro || plan === "pro"}
-            >
-              {isUpgradingGrowth ? "Upgrading..." : "Upgrade to Growth"}
-            </button>
+            {plan === "growth" ? (
+              <>
+                <button className="replix-btn-pricing replix-btn-primary" disabled>
+                  Current Replix AI Plan
+                </button>
+                <div className="replix-current-plan-notice">
+                  This is your Replix AI subscription. Your Shopify store subscription is managed separately by Shopify.
+                </div>
+              </>
+            ) : (
+              <button 
+                className="replix-btn-pricing replix-btn-brand" 
+                onClick={handleUpgradeGrowth} 
+                disabled={isUpgradingGrowth || isUpgradingPro || plan === "pro"}
+              >
+                {isUpgradingGrowth ? "Upgrading..." : "Upgrade to Growth"}
+              </button>
+            )}
           </div>
 
           {/* PRO PLAN */}
