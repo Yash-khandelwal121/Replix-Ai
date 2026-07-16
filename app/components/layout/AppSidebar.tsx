@@ -88,8 +88,18 @@ export default function AppSidebar() {
           const shopStr = appData?.shop || "My Store";
           const shopName = shopStr.replace(".myshopify.com", "");
           const initials = shopName.substring(0, 2).toUpperCase();
-          const isPro = appData?.plan === "pro";
-          const planName = isPro ? "Pro Plan" : "Free Plan";
+          const activePlan = appData?.plan || "free";
+          
+          let planName = "Free Plan";
+          let planColor = "#6B7280";
+          
+          if (activePlan === "pro") {
+            planName = "Pro Plan";
+            planColor = "#d946ef"; // Pink/purple gradient match
+          } else if (activePlan === "growth") {
+            planName = "Growth Plan";
+            planColor = "var(--color-primary)";
+          }
 
           return (
             <>
@@ -97,7 +107,7 @@ export default function AppSidebar() {
                 width: "32px",
                 height: "32px",
                 borderRadius: "50%",
-                backgroundColor: isPro ? "var(--color-primary)" : "#6B7280",
+                backgroundColor: planColor,
                 color: "white",
                 display: "flex",
                 alignItems: "center",
@@ -111,7 +121,7 @@ export default function AppSidebar() {
                 <div style={{ fontSize: "14px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {shopName}
                 </div>
-                <div style={{ fontSize: "12px", color: isPro ? "var(--color-primary)" : "#6B7280" }}>
+                <div style={{ fontSize: "12px", color: planColor }}>
                   ● {planName}
                 </div>
               </div>
