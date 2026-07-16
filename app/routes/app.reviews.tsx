@@ -116,6 +116,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
+  if (intent === "delete_all") {
+    try {
+      await db.reply.deleteMany({ where: { shop: session.shop } });
+      await db.review.deleteMany({ where: { shop: session.shop } });
+      return json({ success: true, actionType: "delete_all" });
+    } catch (err: any) {
+      return json({ error: err.message || "Failed to delete all reviews" }, { status: 500 });
+    }
+  }
+
   return json({ error: "Invalid intent" }, { status: 400 });
 };
 
@@ -142,6 +152,7 @@ export default function ReviewsList() {
 
   const isSyncing = fetcher.state !== "idle" && fetcher.formAction === "/api/reviews/sync";
   const isCreatingManual = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "create_manual";
+  const isDeletingAll = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "delete_all";
   const isLoading = navigation.state === "loading";
 
   // Handle fetcher responses
@@ -151,6 +162,8 @@ export default function ReviewsList() {
         showToast(`Successfully synced ${fetcher.data.synced} reviews!`);
       } else if (fetcher.data.actionType === "delete") {
         showToast("Review deleted successfully!");
+      } else if (fetcher.data.actionType === "delete_all") {
+        showToast("All reviews deleted successfully!");
       } else {
         showToast("Review created successfully!");
         setIsManualModalOpen(false);
@@ -190,6 +203,12 @@ export default function ReviewsList() {
     const formData = new FormData();
     formData.append("intent", "sync");
     fetcher.submit(formData, { method: "post", action: "/api/reviews/sync" });
+  };
+
+  const handleDeleteAll = () => {
+    if (window.confirm("Are you sure you want to delete ALL reviews? This action cannot be undone.")) {
+      fetcher.submit({ intent: "delete_all" }, { method: "post" });
+    }
   };
 
   const handleSearch = (value: string) => {
@@ -291,9 +310,16 @@ export default function ReviewsList() {
           </table>
           
           <div style={{ padding: "16px 20px", borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "13px", color: "var(--color-text-secondary)" }}>
-              Page {page} of {Math.ceil(total / 20) || 1}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <span style={{ fontSize: "13px", color: "var(--color-text-secondary)" }}>
+                Page {page} of {Math.ceil(total / 20) || 1}
+              </span>
+              {total > 0 && (
+                <Button tone="critical" variant="plain" onClick={handleDeleteAll} loading={isDeletingAll}>
+                  Delete All
+                </Button>
+              )}
+            </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <Button disabled={page <= 1} onClick={() => submit({ search, sort: sortValue, page: (page - 1).toString() }, { method: "get" })}>Previous</Button>
               <Button disabled={page >= Math.ceil(total / 20)} onClick={() => submit({ search, sort: sortValue, page: (page + 1).toString() }, { method: "get" })}>Next</Button>
