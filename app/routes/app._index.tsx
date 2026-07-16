@@ -127,7 +127,7 @@ export default function Dashboard() {
       <div className="dashboard-banner animate-fade-up" style={{ marginBottom: "40px" }}>
         <div className="dashboard-banner-content">
           <h1 style={{ fontSize: "42px", fontWeight: 700, marginBottom: "12px", letterSpacing: "-1px", lineHeight: 1.2 }}>
-            Good morning, Yash! 👋
+            Good morning, Yash!
           </h1>
           <p style={{ fontSize: "16px", opacity: 0.9, marginBottom: "28px", maxWidth: "480px", lineHeight: 1.6 }}>
             Replix AI is working hard to help you manage customer reviews smarter and faster.
@@ -138,22 +138,22 @@ export default function Dashboard() {
               <span style={{ color: "#10B981" }}>✓</span> AI Enabled
             </div>
             <div className="banner-badge">
-              <span style={{ color: "#10B981" }}>🛍️</span> Shopify Connected
+              <span style={{ color: "#10B981" }}>✓</span> Shopify Connected
             </div>
             <div className="banner-badge">
-              <span style={{ color: "#6366f1" }}>🔄</span> Real-time Sync
+              <span style={{ color: "#6366f1" }}>✓</span> Real-time Sync
             </div>
           </div>
 
           <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
             <button className="banner-btn banner-btn-primary" onClick={() => navigate("/app/reviews")}>
-              <span>✨</span> Generate AI Replies
+              Generate AI Replies
             </button>
             <button className="banner-btn banner-btn-white" onClick={() => {}}>
-              <span>🔄</span> Sync Reviews
+              Sync Reviews
             </button>
             <button className="banner-btn banner-btn-white" onClick={() => navigate("/app/templates")}>
-              <span>📄</span> Manage Templates
+              Manage Templates
             </button>
           </div>
         </div>

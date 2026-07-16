@@ -4,11 +4,10 @@
 :root {
   --color-primary:        #6366f1; /* Indigo */
   --color-primary-hover:  #4f46e5;
-  --color-bg:             linear-gradient(135deg, #0d0923 0%, #1e1351 40%, #4624d6 100%); /* Dark Banner Background */
+  --color-bg:             linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); /* Noticeable Purple to Blue gradient */
   --color-surface:        #FFFFFF;
-  --color-border:         rgba(255, 255, 255, 0.1);
-  --color-text:           #FFFFFF; /* White text for dark background */
-  --color-text-card:      #0F172A; /* Slate 900 for inside white cards */
+  --color-border:         #E5E7EB;
+  --color-text:           #0F172A; /* Slate 900 */
   --color-text-secondary: #64748B; /* Slate 500 */
   --color-success:        #10B981;
   --color-warning:        #F59E0B;
@@ -32,7 +31,6 @@ body {
 
 .replix-card {
   background: var(--color-surface);
-  color: var(--color-text-card); /* Keep text dark inside white cards */
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -87,13 +85,13 @@ body {
 
 /* New Banner specific */
 .dashboard-banner {
-  background: transparent; /* Since app background is already this color, make banner transparent */
+  background: linear-gradient(135deg, #0d0923 0%, #1e1351 40%, #4624d6 100%);
   border-radius: var(--radius);
   padding: 48px;
   color: white;
   position: relative;
   overflow: hidden;
-  box-shadow: none; /* Removed shadow since it blends with background */
+  box-shadow: 0 20px 40px rgba(13, 9, 35, 0.3);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -138,8 +136,10 @@ body {
 }
 
 .dashboard-banner-image img {
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 25%);
-  mask-image: linear-gradient(to right, transparent 0%, black 25%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 70%);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 70%);
 }
 
 .banner-badge {
