@@ -135,6 +135,13 @@ body {
   animation: float 6s ease-in-out infinite;
 }
 
+.dashboard-banner-image img {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 70%);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 70%);
+}
+
 .banner-badge {
   display: inline-flex;
   align-items: center;
