@@ -22,9 +22,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let actualShopifyPlan = "free";
   
   if (activeSubscriptions.length > 0) {
-    const planName = activeSubscriptions[0].name;
-    if (planName === GROWTH_PLAN) actualShopifyPlan = "growth";
-    else if (planName === PRO_PLAN) actualShopifyPlan = "pro";
+    // If somehow multiple are active, prioritize Pro
+    const hasPro = activeSubscriptions.some(sub => sub.name === PRO_PLAN);
+    const hasGrowth = activeSubscriptions.some(sub => sub.name === GROWTH_PLAN);
+    
+    if (hasPro) actualShopifyPlan = "pro";
+    else if (hasGrowth) actualShopifyPlan = "growth";
   }
 
   // Sync DB with Shopify reality
@@ -82,11 +85,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     for (const subscription of billingCheck.appSubscriptions) {
       if (subscription.status === 'ACTIVE') {
-        await billing.cancel({
-          subscriptionId: subscription.id,
-          isTest: true,
-          prorate: true,
-        });
+        try {
+          await billing.cancel({
+            subscriptionId: subscription.id,
+            isTest: true,
+            prorate: true,
+          });
+        } catch (e) {
+          console.error("Failed to cancel subscription", subscription.id, e);
+        }
       }
     }
 
