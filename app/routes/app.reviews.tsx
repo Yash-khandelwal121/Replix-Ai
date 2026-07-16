@@ -2,8 +2,8 @@ import { json, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-r
 import { useLoaderData, useSubmit, useNavigation, useNavigate, useFetcher, Form } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { db } from "../db.server";
-import { Button, Tooltip, Icon, TextField, Select, Modal, FormLayout, BlockStack, Text } from "@shopify/polaris";
-import { SearchIcon } from "@shopify/polaris-icons";
+import { Button, Tooltip, Icon, TextField, Select, Modal, FormLayout, BlockStack, Text, ButtonGroup } from "@shopify/polaris";
+import { SearchIcon, DeleteIcon } from "@shopify/polaris-icons";
 import { StarRating } from "../components/reviews/StarRating";
 import { SentimentBadge } from "../components/reviews/SentimentBadge";
 import { StatusBadge } from "../components/reviews/StatusBadge";
@@ -97,9 +97,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           createdAt: new Date()
         }
       });
-      return json({ success: true });
+      return json({ success: true, actionType: "create" });
     } catch (err: any) {
       return json({ error: err.message || "Failed to create review." }, { status: 500 });
+    }
+  }
+
+  if (intent === "delete_review") {
+    const reviewId = formData.get("reviewId")?.toString();
+    if (!reviewId) return json({ error: "Review ID required" }, { status: 400 });
+    try {
+      // Delete reply first if it exists
+      await db.reply.deleteMany({ where: { reviewId, shop: session.shop } });
+      await db.review.delete({ where: { id: reviewId, shop: session.shop } });
+      return json({ success: true, actionType: "delete" });
+    } catch (err: any) {
+      return json({ error: err.message || "Failed to delete review" }, { status: 500 });
     }
   }
 
@@ -136,13 +149,15 @@ export default function ReviewsList() {
     if (fetcher.data?.success) {
       if (fetcher.data.synced !== undefined) {
         showToast(`Successfully synced ${fetcher.data.synced} reviews!`);
+      } else if (fetcher.data.actionType === "delete") {
+        showToast("Review deleted successfully!");
       } else {
         showToast("Review created successfully!");
         setIsManualModalOpen(false);
         setManualForm({ customerName: "", productName: "", productId: "", rating: "5", body: "" });
       }
       // Reload the page data
-      submit({ search, sort: sortValue, page }, { method: "get" });
+      submit({ search, sort: sortValue, page: page.toString() }, { method: "get" });
     } else if (fetcher.data?.error) {
       showToast(fetcher.data.error, true);
     }
@@ -356,6 +371,7 @@ function ReviewRow({ review }: { review: any }) {
   const { showToast } = useToast();
 
   const isGenerating = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "generate";
+  const isDeleting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "delete_review";
 
   useEffect(() => {
     if (fetcher.data?.reply) {
@@ -370,6 +386,12 @@ function ReviewRow({ review }: { review: any }) {
       { reviewId: review.id, intent: "generate" },
       { method: "post", action: "/api/reply/generate" }
     );
+  };
+
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete this review?")) {
+      fetcher.submit({ reviewId: review.id, intent: "delete_review" }, { method: "post" });
+    }
   };
 
   return (
@@ -408,15 +430,24 @@ function ReviewRow({ review }: { review: any }) {
       <td style={tdStyle}>{getProviderBadge(review.provider)}</td>
       <td style={tdStyle}><StatusBadge status={review.status} /></td>
       <td style={{ ...tdStyle, textAlign: "right" }}>
-        {review.status === "pending" ? (
-          <Button onClick={handleGenerate} loading={isGenerating}>
-            Generate Reply
-          </Button>
-        ) : (
-          <Button onClick={() => navigate(`/app/reviews/${review.id}`)}>
-            View Reply
-          </Button>
-        )}
+        <ButtonGroup>
+          {review.status === "pending" ? (
+            <Button onClick={handleGenerate} loading={isGenerating}>
+              Generate Reply
+            </Button>
+          ) : (
+            <Button onClick={() => navigate(`/app/reviews/${review.id}`)}>
+              View Reply
+            </Button>
+          )}
+          <Button 
+            icon={DeleteIcon} 
+            tone="critical" 
+            variant="tertiary"
+            onClick={handleDelete}
+            loading={isDeleting}
+          />
+        </ButtonGroup>
       </td>
     </tr>
   );
