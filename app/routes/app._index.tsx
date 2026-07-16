@@ -11,7 +11,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  const [pendingCount, publishedToday, reviews, replies] = await Promise.all([
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+  const [pendingCount, publishedToday, reviews, replies, thisWeekReviews, lastWeekReviews] = await Promise.all([
     db.review.count({ where: { shop, status: "pending" } }),
     db.reply.count({ 
       where: { 
@@ -20,19 +24,34 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       } 
     }),
     db.review.findMany({ where: { shop }, select: { rating: true } }),
-    db.reply.count({ where: { shop } })
+    db.reply.count({ where: { shop } }),
+    db.review.count({
+      where: { shop, createdAt: { gte: sevenDaysAgo } }
+    }),
+    db.review.count({
+      where: { shop, createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } }
+    })
   ]);
 
   const averageRating = reviews.length 
     ? (reviews.reduce((acc: any, r: any) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
+  let weeklyGrowth = 0;
+  if (lastWeekReviews === 0) {
+    weeklyGrowth = thisWeekReviews > 0 ? 100 : 0;
+  } else {
+    weeklyGrowth = Math.round(((thisWeekReviews - lastWeekReviews) / lastWeekReviews) * 100);
+  }
+  const weeklyGrowthDisplay = weeklyGrowth >= 0 ? `+${weeklyGrowth}%` : `${weeklyGrowth}%`;
+
   return json({
     shopName: shop,
     pendingCount,
     publishedToday,
     averageRating,
-    totalGenerated: replies
+    totalGenerated: replies,
+    weeklyGrowthDisplay
   });
 };
 
@@ -92,6 +111,16 @@ export default function Dashboard() {
     }
   }, [searchParams, showToast, setSearchParams]);
 
+  // Real Data Calculations
+  const totalMinutesSaved = data.totalGenerated * 3;
+  const hoursSavedDisplay = totalMinutesSaved < 60 
+    ? `${totalMinutesSaved}m` 
+    : `${Math.round(totalMinutesSaved / 60)}h`;
+
+  const customerSatisfaction = parseFloat(data.averageRating) > 0 
+    ? `${Math.round((parseFloat(data.averageRating) / 5) * 100)}%` 
+    : "0%";
+
   return (
     <div style={{ padding: "40px", maxWidth: "1200px", margin: "0 auto", paddingBottom: "80px" }}>
       {/* Banner */}
@@ -142,9 +171,9 @@ export default function Dashboard() {
         gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
         gap: "24px"
       }}>
-        <StatCard title="Hours Saved" value={`${Math.round((data.totalGenerated * 3) / 60)}h`} icon={DuplicateIcon} tint="info" delay="delay-200" />
-        <StatCard title="Customer Satisfaction" value="98%" icon={HeartIcon} tint="success" delay="delay-300" />
-        <StatCard title="Weekly Growth" value="+12%" icon={ArrowUpIcon} tint="primary" delay="delay-300" />
+        <StatCard title="Time Saved" value={hoursSavedDisplay} icon={DuplicateIcon} tint="info" delay="delay-200" />
+        <StatCard title="Customer Satisfaction" value={customerSatisfaction} icon={HeartIcon} tint="success" delay="delay-300" />
+        <StatCard title="Weekly Growth" value={data.weeklyGrowthDisplay} icon={ArrowUpIcon} tint="primary" delay="delay-300" />
         <StatCard title="Total Reviews" value={data.pendingCount + data.totalGenerated} icon={CalendarIcon} tint="text-secondary" delay="delay-300" />
       </div>
     </div>
