@@ -126,23 +126,45 @@ export default function Dashboard() {
       {/* Banner */}
       <div className="dashboard-banner animate-fade-up" style={{ marginBottom: "40px" }}>
         <div className="dashboard-banner-content">
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.1)", padding: "6px 16px", borderRadius: "30px", marginBottom: "20px", fontSize: "14px", fontWeight: 500, backdropFilter: "blur(10px)" }}>
-            <span style={{ fontSize: "16px" }}>✨</span> AI Powered Operations
-          </div>
-          <h1 style={{ fontSize: "40px", fontWeight: 700, marginBottom: "16px", letterSpacing: "-1px", lineHeight: 1.2 }}>
-            Welcome back to Replix!
+          <h1 style={{ fontSize: "42px", fontWeight: 700, marginBottom: "12px", letterSpacing: "-1px", lineHeight: 1.2 }}>
+            Good morning, Yash! 👋
           </h1>
-          <p style={{ fontSize: "18px", opacity: 0.8, marginBottom: "32px", maxWidth: "600px", lineHeight: 1.6 }}>
-            Here is what's happening with your store <strong style={{ color: "#fff" }}>{data.shopName}</strong> today. Manage your customer feedback effortlessly with AI.
+          <p style={{ fontSize: "16px", opacity: 0.9, marginBottom: "28px", maxWidth: "480px", lineHeight: 1.6 }}>
+            Replix AI is working hard to help you manage customer reviews smarter and faster.
           </p>
-          <div style={{ display: "flex", gap: "16px" }}>
-            <Button variant="primary" onClick={() => navigate("/app/reviews")} size="large" tone="success">
-              Generate Replies
-            </Button>
-            <Button onClick={() => navigate("/app/settings")} size="large">
-              Configure Settings
-            </Button>
+          
+          <div style={{ display: "flex", gap: "12px", marginBottom: "32px", flexWrap: "wrap" }}>
+            <div className="banner-badge">
+              <span style={{ color: "#10B981" }}>✓</span> AI Enabled
+            </div>
+            <div className="banner-badge">
+              <span style={{ color: "#10B981" }}>🛍️</span> Shopify Connected
+            </div>
+            <div className="banner-badge">
+              <span style={{ color: "#6366f1" }}>🔄</span> Real-time Sync
+            </div>
           </div>
+
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <button className="banner-btn banner-btn-primary" onClick={() => navigate("/app/reviews")}>
+              <span>✨</span> Generate AI Replies
+            </button>
+            <button className="banner-btn banner-btn-white" onClick={() => {}}>
+              <span>🔄</span> Sync Reviews
+            </button>
+            <button className="banner-btn banner-btn-white" onClick={() => navigate("/app/templates")}>
+              <span>📄</span> Manage Templates
+            </button>
+          </div>
+        </div>
+        
+        <div className="dashboard-banner-image">
+          {/* We will use the generated robot illustration here */}
+          <img 
+            src="/images/hero-robot.png" 
+            alt="AI Robot Assistant" 
+            style={{ width: "100%", maxWidth: "340px", height: "auto", dropShadow: "0 20px 40px rgba(0,0,0,0.5)" }} 
+          />
         </div>
       </div>
 
